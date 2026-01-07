@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  /* v4에서는 키프레임을 정의할 때 테마 변수로 자동 연결됩니다 */
+  @keyframes shimmer {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
+
+  @keyframes neon-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 20px rgba(6, 182, 212, 0.5); }
+    50% { opacity: 0.7; box-shadow: 0 0 10px rgba(6, 182, 212, 0.2); }
+  }
+}
+
+/* 일반 클래스는 @theme 블록 밖에 작성합니다 */
+@layer utilities {
+  .animate-shimmer {
+    animation: shimmer 3s infinite linear;
+  }
+
+  .animate-neon {
+    animation: neon-pulse 2s infinite ease-in-out;
+  }
+
+  .neon-card {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+  }
+    .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+
+/* 스크롤바 커스텀 (미래지향적 디자인) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0891b2;
+}
+:root {
+  --app-bg: #020617;
+}
+
+
+html, body, #root {
+  height: 100%;
+  background-color: #020617; /* bg-slate-950 */
+  margin: 0;
+  padding: 0;
+}
+body {
+  background-color: var(--app-bg);
+  color: white;
+  overflow-x: hidden;
+}
+
+/* 추가적인 레이어링이 필요할 때 */
+@layer components {
+  .cyber-button {
+    @apply relative overflow-hidden transition-all active:scale-95;
+  }
+}
+/* src/index.css */
+@media (min-width: 768px) {
+  /* .cursor-pointer 요소 자체는 포인터임을 명시하되, 브라우저 기본 커서만 숨깁니다. */
+  .cursor-pointer,
+  .cursor-pointer *,
+  button,
+  a {
+    cursor: none !important;
+  }
+}

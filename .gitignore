@@ -1,0 +1,131 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# -------------------------
+# Python / Backend
+# -------------------------
+# virtualenvs
+.venv/
+venv/
+env/
+ENV/
+.Python
+
+# bytecode / caches / build
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+pip-wheel-metadata/
+build/
+dist/
+.eggs/
+
+# pytest / mypy / coverage
+.pytest_cache/
+.mypy_cache/
+.tox/
+.coverage
+htmlcov/
+
+# backend local env
+/backend/.env
+/backend/.env.local
+
+# Local databases
+*.db
+dev.db
+
+# -------------------------
+# Frontend / Node extras
+# -------------------------
+# Vite / local envs
+/frontend/.env
+/frontend/.env.local
+.env
+.env.local
+.env.*
+!.env.example
+
+# -------------------------
+# Docker / runtime data
+# -------------------------
+# local volume / data directories
+/data/
+pgdata/
+postgres-data/
+*.sqlite3
+docker-compose.override.yml
+
+# Docker credentials / build cache
+docker-compose.*.local
+.docker/
+
+# -------------------------
+# Secrets / keys / certs
+# -------------------------
+# private keys, certs
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.pfx
+id_rsa*
+id_ecdsa*
+.ssh/
+
+# secret folders
+secrets/
+private/
+*.secret
+
+# -------------------------
+# Other tools / infra
+# -------------------------
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+
+# Kubernetes
+.kube/
+
+# OS / editors (some already present but add common ones)
+.vscode/
+.idea/
+.DS_Store
+
+# Logs (already present but keep safe)
+logs/
+*.log
+
+# Scratch / temp files
+POST
+find
+git
+rg
+queryex

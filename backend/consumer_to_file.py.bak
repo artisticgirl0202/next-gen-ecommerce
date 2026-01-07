@@ -1,0 +1,79 @@
+# -*- coding: utf-8 -*-
+
+import asyncio
+import os
+import json
+import logging
+from aiokafka import AIOKafkaConsumer
+from aiokafka.errors import KafkaConnectionError, GroupCoordinatorNotAvailableError, KafkaError
+
+# 로깅 ?�정 (print ?�???�용?�면 ??깔끔?�니??
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("consumer")
+
+# ?�경 변???�정
+BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
+TOPIC = "user-events"
+# ?�이?��? ?�?�될 경로
+FILE = os.getenv("INTERACTIONS_FILE", "/data/interactions.json")
+GROUP_ID = os.getenv("KAFKA_CONSUMER_GROUP", "interactions-writer")
+
+async def consume_and_write():
+    # 1. ?�?�할 ?�더가 ?�으�??�성 (?�러 방�?)
+    directory = os.path.dirname(FILE)
+    if directory and not os.path.exists(directory):
+        logger.info(f"Creating directory: {directory}")
+        os.makedirs(directory, exist_ok=True)
+
+    logger.info(f"Starting Consumer... Target: {BOOTSTRAP}, Topic: {TOPIC}, File: {FILE}")
+
+    # 2. 무한 ?�시??루프 (컨테?�너가 죽�? ?�도�???
+    while True:
+        consumer = None
+        try:
+            consumer = AIOKafkaConsumer(
+                TOPIC,
+                bootstrap_servers=BOOTSTRAP,
+                group_id=GROUP_ID,
+                auto_offset_reset="earliest",
+                retry_backoff_ms=2000  # ?��? ?�시??간격
+            )
+
+            # 3. ?�결 ?�도
+            await consumer.start()
+            logger.info("??Connected to Kafka! Waiting for messages...")
+
+            # 4. 메시지 ?�비 루프
+            async for msg in consumer:
+                try:
+                    data = json.loads(msg.value.decode())
+                    # ?�일???�기 (append mode)
+                    with open(FILE, "a", encoding="utf-8") as f:
+                        f.write(json.dumps(data) + "\n")
+                    # logger.info(f"Saved event: {data}") # ?�무 ?�끄?�우�?주석 처리
+                except Exception as e:
+                    logger.error(f"Error processing message: {e}")
+
+        except (KafkaConnectionError, GroupCoordinatorNotAvailableError) as e:
+            # Kafka가 ?�직 준비되지 ?�았거나, Coordinator ?�출 중일 ??
+            logger.warning(f"?�️ Kafka not ready yet ({type(e).__name__}). Retrying in 5s...")
+            await asyncio.sleep(5)
+
+        except Exception as e:
+            # 기�? ?�상�?못한 ?�러
+            logger.error(f"??Unexpected error: {e}. Retrying in 5s...")
+            await asyncio.sleep(5)
+
+        finally:
+            # 루프가 깨�?거나 ?�시????리소???�리
+            if consumer:
+                try:
+                    await consumer.stop()
+                except:
+                    pass
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(consume_and_write())
+    except KeyboardInterrupt:
+        logger.info("Consumer stopped by user.")

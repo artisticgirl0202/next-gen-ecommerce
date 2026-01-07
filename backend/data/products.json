@@ -1,0 +1,123 @@
+[
+  {
+    "id": 1,
+    "name": "AlphaPhone X",
+    "brand": "Alpha",
+    "price": 999,
+    "image": "https://picsum.photos/seed/1/400/500",
+    "rating": 4.6,
+    "description": "Flagship smartphone with AI-assisted camera and edge-AI features.",
+    "categories": ["모바일 & 웨어러블"]
+  },
+  {
+    "id": 2,
+    "name": "BetaPad Pro 12",
+    "brand": "Beta",
+    "price": 799,
+    "image": "https://picsum.photos/seed/2/400/500",
+    "rating": 4.4,
+    "description": "High performance tablet for creatives with stylus support.",
+    "categories": ["컴퓨팅 기기"]
+  },
+  {
+    "id": 3,
+    "name": "GammaBook 14 Ultrabook",
+    "brand": "Gamma",
+    "price": 1299,
+    "image": "https://picsum.photos/seed/3/400/500",
+    "rating": 4.8,
+    "description": "Lightweight ultrabook for professionals, long battery life.",
+    "categories": ["컴퓨팅 기기", "부품 & 하드웨어"]
+  },
+  {
+    "id": 4,
+    "name": "DeltaEar Wireless NC",
+    "brand": "Delta",
+    "price": 199,
+    "image": "https://picsum.photos/seed/4/400/500",
+    "rating": 4.2,
+    "description": "Active noise cancelling earbuds with low-latency mode.",
+    "categories": ["오디오 기기"]
+  },
+  {
+    "id": 5,
+    "name": "Epsilon Watch S",
+    "brand": "Epsilon",
+    "price": 299,
+    "image": "https://picsum.photos/seed/5/400/500",
+    "rating": 4.1,
+    "description": "Fitness-first smartwatch with advanced sensors.",
+    "categories": ["모바일 & 웨어러블"]
+  },
+  {
+    "id": 6,
+    "name": "PhotonCam 4K",
+    "brand": "Photon",
+    "price": 999,
+    "image": "https://picsum.photos/seed/6/400/500",
+    "rating": 4.7,
+    "description": "Mirrorless camera for hybrid creators with 4K60 recording.",
+    "categories": ["카메라 & 촬영 장비"]
+  },
+  {
+    "id": 7,
+    "name": "Orbit Router AX6000",
+    "brand": "Orbit",
+    "price": 249,
+    "image": "https://picsum.photos/seed/7/400/500",
+    "rating": 4.3,
+    "description": "WiFi 6E router for high-throughput home networks.",
+    "categories": ["네트워크 & 통신 장비"]
+  },
+  {
+    "id": 8,
+    "name": "Titan PS 10000",
+    "brand": "Titan",
+    "price": 59,
+    "image": "https://picsum.photos/seed/8/400/500",
+    "rating": 4.0,
+    "description": "High-speed USB-C PD charger (100W).",
+    "categories": ["전원 & 충전 장치", "주변기기 & 액세서리"]
+  },
+  {
+    "id": 9,
+    "name": "GamerCore RTX Desktop",
+    "brand": "GamerCore",
+    "price": 2099,
+    "image": "https://picsum.photos/seed/9/400/500",
+    "rating": 4.9,
+    "description": "High-end gaming desktop with RTX-class GPU.",
+    "categories": ["게이밍 기기", "컴퓨팅 기기"]
+  },
+  {
+    "id": 10,
+    "name": "SmartHome Hub Pro",
+    "brand": "SmartHome",
+    "price": 199,
+    "image": "https://picsum.photos/seed/10/400/500",
+    "rating": 4.2,
+    "description": "Smart home controller supporting Zigbee and Matter.",
+    "categories": ["스마트 홈 & IoT", "네트워크 & 통신 장비"]
+  },
+  {
+    "id": 11,
+    "name": "Analog Synth Module X",
+    "brand": "ModularLab",
+    "price": 499,
+    "image": "https://picsum.photos/seed/11/400/500",
+    "rating": 4.5,
+    "description": "Special purpose electronic musical module for sound designers.",
+    "categories": ["특수 목적 전자기기"]
+  },
+  {
+    "id": 12,
+    "name": "EdgeAI Dev Board",
+    "brand": "EdgeLabs",
+    "price": 149,
+    "image": "https://picsum.photos/seed/12/400/500",
+    "rating": 4.4,
+    "description": "AI acceleration dev board for on-device inference.",
+    "categories": ["AI·차세대 디바이스", "부품 & 하드웨어"]
+  }
+
+]

@@ -1,0 +1,37 @@
+# FROM python:3.11-slim
+
+# WORKDIR /app
+# ENV PYTHONDONTWRITEBYTECODE=1
+# ENV PYTHONUNBUFFERED=1
+
+# # 컨텍스트가 backend 이므로 바로 requirements.txt
+# COPY requirements.txt ./requirements.txt
+
+# RUN pip install --no-cache-dir -r requirements.txt
+
+# COPY . ./backend
+
+# EXPOSE 8000
+# CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# backend/Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Python env
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+# 명시적으로 PYTHONPATH 추가 (모듈 검색 경로 확보)
+ENV PYTHONPATH=/app
+
+# 복사: 빌드 컨텍스트(./backend)의 파일들을 /app에 복사
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# 앱 소스 전체를 /app으로 복사 (기존 COPY . ./backend 대신)
+COPY . /app
+
+EXPOSE 8000
+
+# uvicorn 실행: backend.app:app 을 그대로 사용 가능 (app.py가 backend/ 디렉토리에 있을 때)
+CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000"]

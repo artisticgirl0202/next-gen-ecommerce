@@ -1,0 +1,217 @@
+# services:
+#   zookeeper:
+#     image: confluentinc/cp-zookeeper:7.4.1
+#     environment:
+#       ZOOKEEPER_CLIENT_PORT: 2181
+#       ZOOKEEPER_TICK_TIME: 2000
+#     ports:
+#       - "2181:2181"
+
+#   kafka:
+#     image: confluentinc/cp-kafka:7.4.1
+#     depends_on:
+#       - zookeeper
+#     ports:
+#       - "9092:9092"
+#     environment:
+#       KAFKA_BROKER_ID: 1
+#       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+#       # Listeners
+#       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+#       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+#       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+#       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+#       # --- START FIXES ---
+#       # 1. Start group rebalance immediately
+#       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+#       # 2. Ensure internal topics work with 1 broker
+#       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+#       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+#       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+#       KAFKA_MIN_IN_SYNC_REPLICAS: 1
+#       # --- END FIXES ---
+
+#     healthcheck:
+#       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 10
+
+#   redis:
+#     image: redis:7
+#     command: ["redis-server", "--appendonly", "yes"]
+#     volumes:
+#       - redis-data:/data
+#     ports:
+#       - "6379:6379"
+
+#   backend:
+#     build:
+#       context: ./backend
+#       dockerfile: Dockerfile
+#     volumes:
+#       - ./backend:/app/backend
+#     environment:
+#       REDIS_HOST: redis
+#       REDIS_PORT: 6379
+#       REDIS_PASSWORD: ""
+#       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+#       INTERACTIONS_FILE: /data/interactions.json
+#     depends_on:
+#       kafka:
+#         condition: service_healthy
+#       redis:
+#         condition: service_started
+#     ports:
+#       - "8000:8000"
+#     command:
+#       - uvicorn
+#       - backend.app:app
+#       - --host
+#       - 0.0.0.0
+#       - --port
+#       - "8000"
+
+#   consumer:
+#     build:
+#       context: ./backend
+#       dockerfile: Dockerfile
+#     command: ["python", "backend/consumer_to_file.py"]
+#     volumes:
+#       - ./backend:/app/backend
+#       - redis-data:/data
+#     environment:
+#       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+#       INTERACTIONS_FILE: /data/interactions.json
+#     depends_on:
+#       kafka:
+#         condition: service_healthy
+#       redis:
+#         condition: service_started
+
+# volumes:
+#   redis-data:
+#     driver: local
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.1
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      # Listeners
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # --- START FIXES ---
+      # 1. Start group rebalance immediately
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # 2. Ensure internal topics work with 1 broker
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_MIN_IN_SYNC_REPLICAS: 1
+      # --- END FIXES ---
+
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: appdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app/backend
+      - redis-data:/data
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      INTERACTIONS_FILE: /data/interactions.json
+      # DATABASE_URL for SQLAlchemy / application DB
+      DATABASE_URL: postgresql://app:pass@postgres:5432/appdb
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    command:
+      - uvicorn
+      - backend.app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+
+  consumer:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["python", "backend/consumer_to_file.py", "backend/consumer/order_event_consumer.py"]
+    volumes:
+      - ./backend:/app/backend
+      - redis-data:/data
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      INTERACTIONS_FILE: /data/interactions.json
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+
+volumes:
+  redis-data:
+    driver: local
+  pgdata:
+    driver: local
