@@ -15,3 +15,5 @@ export const BentoCard = ({ children, className = "" }: { children: React.ReactN
     {children}
   </motion.div>
 );
+
+export default BentoCard;

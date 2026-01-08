@@ -1,18 +1,4 @@
-// export const CATEGORY_PRODUCTS = [
-//   { id: 1, category: "컴퓨팅 기기", name: "Quantum Laptop", price: 1200, brand: "NextGen", image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800" },
-//   { id: 2, category: "모바일 & 웨어러블", name: "Neural Watch", price: 350, brand: "BioTech", image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800" },
-//   { id: 3, category: "오디오 기기", name: "Sonic Buds", price: 180, brand: "AudioX", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800" },
-//   { id: 4, category: "영상·디스플레이 기기", name: "8K OLED Monitor", price: 990, brand: "Vision", image: "https://picsum.photos/seed/monitor/600/800" },
-//   { id: 5, category: "카메라 & 촬영 장비", name: "Alpha Cam Z", price: 1500, brand: "LensMaster", image: "https://picsum.photos/seed/camera/600/800" },
-//   { id: 6, category: "주변기기 & 액세서리", name: "Haptic Mouse", price: 80, brand: "Input", image: "https://picsum.photos/seed/mouse/600/800" },
-//   { id: 7, category: "게이밍 기기", name: "VR Holo Deck", price: 700, brand: "GamePro", image: "https://picsum.photos/seed/vr/600/800" },
-//   { id: 8, category: "스마트 홈 & IoT", name: "AI Hub Mini", price: 120, brand: "SmartLife", image: "https://picsum.photos/seed/iot/600/800" },
-//   { id: 9, category: "네트워크 & 통신 장비", name: "6G Router", price: 250, brand: "NetSpeed", image: "https://picsum.photos/seed/wifi/600/800" },
-//   { id: 10, category: "전원 & 충전 장치", name: "Solar Power Bank", price: 90, brand: "EcoCharge", image: "https://picsum.photos/seed/power/600/800" },
-//   { id: 11, category: "부품 & 하드웨어", name: "RTX 5090 Ti", price: 2100, brand: "GPU-Tech", image: "https://picsum.photos/seed/gpu/600/800" },
-//   { id: 12, category: "특수 목적 전자기기", name: "Lab Scanner X", price: 3400, brand: "ScienceCo", image: "https://picsum.photos/seed/scanner/600/800" },
-//   { id: 13, category: "AI·차세대 디바이스", name: "Neural Link Band", price: 5000, brand: "MindTech", image: "https://picsum.photos/seed/ai/600/800" },
-// ];
+"use strict";
 
 export const CATEGORIES = [
   "All",

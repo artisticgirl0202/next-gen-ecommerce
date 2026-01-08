@@ -1,0 +1,8 @@
+# Ignore virtual envs and site-packages to avoid irrelevant linting
+venv/
+backend/venv/
+**/venv/
+
+# Node and build artifacts
+node_modules/
+dist/

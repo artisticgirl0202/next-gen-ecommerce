@@ -1,4 +1,5 @@
 // src/data/combined_fast.ts
+import type { Product } from "@/types";
 import demoData from './demo_products_500.json';
 
 // ✅ 1. 기본 상품 데이터 (직접 삽입하여 누락 방지)
@@ -161,10 +162,16 @@ export const MERGED_PRODUCTS = [
     category: mapCategory(p.category, p.name)
   })),
   // 2) 데모 데이터 (ID + 10000 하여 충돌 방지)
-  ...(demoData as any[]).map(p => ({
-    ...p,
-    id: Number(p.id) + 10000,
-    price: Number(p.price) || 0,
-    category: mapCategory(p.category || "", p.name)
-  }))
+  ...((demoData as unknown as Record<string, unknown>[])).map((p) => {
+    const id = Number(p.id as unknown) || 0;
+    const price = Number(p.price as unknown) || 0;
+    const name = String(p.name ?? "");
+    const categoryRaw = String(p.category ?? "");
+    return {
+      ...(p as Record<string, unknown>),
+      id: id + 10000,
+      price,
+      category: mapCategory(categoryRaw, name),
+    } as unknown as Product;
+  })
 ];

@@ -106,3 +106,5 @@ export const GlobalCursor = () => {
     </div>
   );
 };
+
+export default GlobalCursor;

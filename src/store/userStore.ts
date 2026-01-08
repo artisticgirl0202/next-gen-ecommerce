@@ -1,21 +1,30 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+
+// src/store/userStore.ts
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+interface OrderItem {
+  productId: number;
+  qty: number;
+}
 
 interface Order {
   id: string;
   date: string;
-  items: any[];
+  items: OrderItem[];
   total: number;
-  status: 'Processing' | 'Shipped' | 'Delivered';
+  status: "Processing" | "Shipped" | "Delivered";
+}
+
+interface UserProfile {
+  name: string;
+  phone: string;
+  email: string;
+  addresses: string[];
 }
 
 interface UserState {
-  profile: {
-    name: string;
-    phone: string;
-    email: string;
-    addresses: string[];
-  };
+  profile: UserProfile;
   orders: Order[];
   addOrder: (order: Order) => void;
   addAddress: (addr: string) => void;
@@ -31,13 +40,15 @@ export const useUserStore = create<UserState>()(
         addresses: ["123 Cyberpunk St, Neo Seoul"],
       },
       orders: [],
-      addOrder: (order) => set((state) => ({
-        orders: [order, ...state.orders]
-      })),
-      addAddress: (addr) => set((state) => ({
-        profile: { ...state.profile, addresses: [...state.profile.addresses, addr] }
-      })),
+      addOrder: (order) =>
+        set((state) => ({
+          orders: [order, ...state.orders],
+        })),
+      addAddress: (addr) =>
+        set((state) => ({
+          profile: { ...state.profile, addresses: [...state.profile.addresses, addr] },
+        })),
     }),
-    { name: 'user-storage' }
+    { name: "user-storage" }
   )
 );

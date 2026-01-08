@@ -21,6 +21,11 @@ export type Product = {
   image: string;
   rating?: number;
   description?: string;
+  // 일부 코드에서 단일 category 필드를 사용하기도 하므로 둘 다 허용
+  category?: string;
   categories?: string[];
+  connectivity?: string;
   specs?: Record<string, string>;
+  // 간단한 리뷰 타입
+  reviews?: Array<{ id: number; rating: number; title: string; body: string; date: string }>;
 };

@@ -393,7 +393,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Cpu, LayoutGrid, Minus, Plus, ShieldCheck, Trash2, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-export default function CartPage() {
+export default function CartPage({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
   const { items, updateQty, removeItem } = useCart();
 
@@ -417,7 +417,7 @@ export default function CartPage() {
 
             {/* Back Button: Mobile(w-10) -> Tablet/PC(w-12) */}
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => (onBack ? onBack() : navigate(-1))}
               className="group relative flex items-center justify-center
                          w-10 h-10 sm:w-12 sm:h-12
                          transition-all duration-300 cursor-pointer flex-shrink-0

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, CircuitBoard, CreditCard, ShieldCheck, User } from "lucide-react";
+import { CheckCircle2, CircuitBoard, CreditCard, ShieldCheck, ShoppingBag, User } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 

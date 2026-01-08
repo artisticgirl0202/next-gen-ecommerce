@@ -1,5 +1,5 @@
 export {
   useAddToCart, useProducts,
   useRecommendations
-} from "./useData";
+} from "./hooks/useData";
 

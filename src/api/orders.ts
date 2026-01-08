@@ -1,13 +1,20 @@
+
 // src/api/orders.ts
+export interface OrderItem {
+  productId: number;
+  qty: number;
+}
+
 export interface OrderRequest {
   userId: number;
-  items: { productId: number; qty: number }[];
+  items: OrderItem[];
 }
+
 export interface OrderResponse {
   id: number;
   total: number;
   status: string;
-  items: any[];
+  items: OrderItem[];
   // ...백엔드 반환 스펙에 맞춰 확장
 }
 
@@ -22,16 +29,16 @@ export async function createOrder(payload: OrderRequest): Promise<OrderResponse>
   });
 
   const text = await res.text();
-  // 서버가 JSON을 주지 않으면 디버깅에 도움되도록 text로 먼저 읽음
   try {
     const data = text ? JSON.parse(text) : null;
     if (!res.ok) {
-      // 422 등의 에러를 호출자에게 전달 (자세한 내용 포함)
       throw new Error(`Order create failed: ${res.status} ${JSON.stringify(data)}`);
     }
     return data as OrderResponse;
-  } catch (err) {
-    // JSON 파싱 실패 또는 기타 에러
-    throw new Error(`Order create parse/error: ${res.status} ${text}`);
+  } catch {
+    // JSON 파싱 실패 또는 기타 에러 — 에러 메시지에 디버깅 정보 포함
+    const status = res.status ?? "unknown";
+    const body = typeof text === "string" ? text : JSON.stringify(text);
+    throw new Error(`Order create parse/error: ${status} ${body}`);
   }
 }

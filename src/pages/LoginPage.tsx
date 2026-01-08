@@ -324,7 +324,7 @@ import { AlertCircle, Fingerprint, ScanFace } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-export default function LoginPage() {
+export default function LoginPage({ onLogin }: { onLogin?: () => void }) {
   const { login, rememberMe, setRememberMe } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -365,7 +365,11 @@ export default function LoginPage() {
     // 로그인 로직 실행
     login({ name: "Alex Sterling", email: email }, rememberMe);
 
-    navigate("/auth-success", { state: location.state });
+    if (onLogin) {
+      onLogin();
+    } else {
+      navigate("/auth-success", { state: location.state });
+    }
   };
 
   return (

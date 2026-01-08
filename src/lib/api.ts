@@ -10,6 +10,7 @@ export interface ProductDto {
   rating?: number;
   description?: string;
   categories?: string[];
+  category: string;
   specs?: Record<string, string>;
 }
 

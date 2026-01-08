@@ -502,6 +502,10 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+function makeOrderId() {
+  return `ORD-${Math.random().toString(36).toUpperCase().substring(2, 9)}`;
+}
+
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { items, removeItem } = useCart();
@@ -520,10 +524,11 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (selectedIds.length === 0) return alert("Select items to process.");
 
+    const orderItems = selectedItems.map((it) => ({ productId: it.id, qty: it.qty }));
     const newOrder = {
-      id: `ORD-${Math.random().toString(36).toUpperCase().substring(2, 9)}`,
+      id: makeOrderId(),
       date: new Date().toLocaleDateString(),
-      items: selectedItems,
+      items: orderItems,
       total: total,
       status: 'Processing' as const,
     };

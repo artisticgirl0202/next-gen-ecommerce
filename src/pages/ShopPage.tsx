@@ -5,12 +5,12 @@ import { useSearchParams } from "react-router-dom";
 
 export default function ShopPage() {
   // 1. URL 파라미터 읽기
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // 2. 파라미터 값 추출 (없으면 기본값 설정)
   const activeCategory = searchParams.get("category") || "All";
   const viewMode = (searchParams.get("view") as "grid" | "list") || "grid";
-  const sortBy = (searchParams.get("sort") as any) || "newest";
+  const sortBy = (searchParams.get("sort") as "newest" | "price_low" | "price_high") ?? "newest";
 
   // 브랜드는 콤마(,)로 구분된 문자열로 오므로 배열로 변환
   const brandParam = searchParams.get("brands");
@@ -24,6 +24,16 @@ export default function ShopPage() {
         viewMode={viewMode}
         sortBy={sortBy}
         brands={activeBrands}
+        onCategorySelect={(c) => {
+          const p = new URLSearchParams(searchParams);
+          p.set("category", c);
+          setSearchParams(p);
+        }}
+        onBrandsChange={(brands) => {
+          const p = new URLSearchParams(searchParams);
+          p.set("brands", brands.join(","));
+          setSearchParams(p);
+        }}
       />
 
       <main className="pt-40 pb-20 px-4 md:px-6 max-w-7xl mx-auto">
@@ -42,6 +52,7 @@ export default function ShopPage() {
             viewMode={viewMode}
             sortBy={sortBy}
             brands={activeBrands}
+            searchQuery={searchParams.get('q') ?? ''}
          />
       </main>
     </div>
