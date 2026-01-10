@@ -1,0 +1,83 @@
+<svg width="100%" height="100%" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="cyber-bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" style="stop-color:#050a14;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#020408;stop-opacity:1" />
+    </radialGradient>
+
+    <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="coloredBlur"/> <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <linearGradient id="circuit-line" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00f2fe" />
+      <stop offset="50%" style="stop-color:#4facfe" />
+      <stop offset="100%" style="stop-color:#00c6ff" />
+    </linearGradient>
+
+    <circle id="data-packet" r="1.5" fill="#ffffff" filter="url(#neon-glow)"/>
+  </defs>
+
+  <rect width="100%" height="100%" fill="url(#cyber-bg)"/>
+
+  <g stroke="#1a2a40" stroke-width="0.5" fill="none" opacity="0.4">
+      <pattern id="hex-grid" x="0" y="0" width="50" height="86.6" patternUnits="userSpaceOnUse">
+           <path d="M25 0 L50 14.4 L50 43.3 L25 57.7 L0 43.3 L0 14.4 Z" />
+      </pattern>
+      <rect width="100%" height="100%" fill="url(#hex-grid)" />
+  </g>
+
+  <g filter="url(#neon-glow)" stroke="url(#circuit-line)" fill="none" stroke-linecap="round">
+
+    <g transform="translate(400, 300)" stroke-width="1.2">
+      <circle r="40" opacity="0.8" />
+      <circle r="25" opacity="0.6" />
+      <path d="M-40 0 L-60 0 M40 0 L60 0 M0 -40 L0 -60 M0 40 L0 60" />
+      <path d="M-28 -28 L-45 -45 M28 -28 L45 -45 M-28 28 L-45 45 M28 28 L45 45" />
+      <circle r="5" fill="#00f2fe" stroke="none">
+          <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+
+    <g stroke-width="1">
+        <path id="path1" d="M460 300 L520 300 L550 250 L650 250 L700 200" opacity="0.7"/>
+        <path id="path2" d="M340 300 L280 300 L250 350 L150 350 L100 400" opacity="0.7"/>
+        <path d="M400 240 L400 180 L350 130 L250 130" opacity="0.6"/>
+        <path d="M400 360 L400 420 L450 470 L550 470" opacity="0.6"/>
+    </g>
+
+    <g stroke-width="0.7" opacity="0.8">
+        <rect x="640" y="190" width="20" height="20" rx="2" />
+        <path d="M660 200 L680 200 L700 180" />
+        <rect x="690" y="170" width="10" height="10" />
+
+        <rect x="130" y="340" width="30" height="15" rx="2" />
+        <path d="M145 355 L145 380 L120 405" />
+        <polygon points="110,405 130,405 120,425" />
+    </g>
+
+    <g fill="#00f2fe" stroke="none">
+      <circle cx="520" cy="300" r="2" />
+      <circle cx="550" cy="250" r="2" />
+      <circle cx="280" cy="300" r="2" />
+      <circle cx="250" cy="350" r="2" />
+      <rect x="645" y="185" width="2" height="3" />
+      <rect x="655" y="185" width="2" height="3" />
+      <rect x="645" y="212" width="2" height="3" />
+      <rect x="655" y="212" width="2" height="3" />
+    </g>
+  </g>
+
+  <g>
+      <use href="#data-packet">
+          <animateMotion dur="4s" repeatCount="indefinite" path="M460 300 L520 300 L550 250 L650 250 L700 200" keyPoints="0;1" keyTimes="0;1" calcMode="linear"/>
+      </use>
+       <use href="#data-packet">
+          <animateMotion dur="5s" repeatCount="indefinite" path="M340 300 L280 300 L250 350 L150 350 L100 400" keyPoints="0;1" keyTimes="0;1" calcMode="linear"/>
+      </use>
+  </g>
+</svg>

@@ -1,52 +1,30 @@
-// src/data/products_indexed.js
-// High-performance client-side product index and query utilities
-// Exports:
-//  - ALL_PRODUCTS: merged array (base + demo)
-//  - PRODUCTS_BY_ID: Map<id, product>
-//  - PRODUCTS_BY_CATEGORY: Map<category, Set<id>>
-//  - getProductsByCategory(category, { page, perPage, sortBy, sortDir, q }) => { items, total, page, pageSize }
-//  - getProductById(id)
-//  - searchProducts(q, { page, perPage, sortBy, sortDir })
-
+// src/data/products_indexed.ts
 import { CATEGORY_PRODUCTS as BASE_PRODUCTS } from './categoryData';
 import demoProducts from './demo_products_500.json';
 
+export type ProductLike = {
+  id?: number;
+  name?: string;
+  price?: number | string;
+  image?: string;
+  category?: string;
+  brand?: string;
+  tags?: string[];
+  description?: string;
+  createdAt?: string | number;
+  addedAt?: string | number;
+  date?: string | number;
+  [k: string]: any;
+};
+
 // ---------- helpers ----------
-function lowerBound(arr, value, keyFn = (x) => x) {
-  let lo = 0,
-    hi = arr.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >>> 1;
-    if (keyFn(arr[mid]) < value) lo = mid + 1;
-    else hi = mid;
-  }
-  return lo;
-}
-function upperBound(arr, value, keyFn = (x) => x) {
-  let lo = 0,
-    hi = arr.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >>> 1;
-    if (keyFn(arr[mid]) <= value) lo = mid + 1;
-    else hi = mid;
-  }
-  return lo - 1;
-}
-function intersectSets(sets) {
-  if (!sets || sets.length === 0) return new Set();
-  sets.sort((a, b) => a.size - b.size);
-  const res = new Set(sets[0]);
-  for (let i = 1; i < sets.length; i++) {
-    const s = sets[i];
-    for (const v of Array.from(res)) {
-      if (!s.has(v)) res.delete(v);
-    }
-    if (res.size === 0) break;
-  }
-  return res;
-}
-function idsToProducts(idsSet, productsById) {
-  const out = [];
+// Unused helper functions (lowerBound, upperBound, intersectSets) removed to fix TS6133
+
+function idsToProducts(
+  idsSet: Set<number>,
+  productsById: Map<number, ProductLike>,
+) {
+  const out: ProductLike[] = [];
   for (const id of idsSet) {
     const p = productsById.get(id);
     if (p) out.push(p);
@@ -55,54 +33,63 @@ function idsToProducts(idsSet, productsById) {
 }
 
 // ---------- build merged list and indexes ----------
-const buildIndexes = ({ prefer = 'base' } = {}) => {
+// Removed unused 'prefer' parameter
+const buildIndexes = () => {
   // 1) merge by id (base priority)
-  const idMap = new Map();
+  const idMap = new Map<number, ProductLike>();
   // base first
-  for (const p of BASE_PRODUCTS) {
+  for (const p of BASE_PRODUCTS as ProductLike[]) {
     if (p && typeof p.id === 'number') idMap.set(p.id, p);
   }
   // demo next - only add if id not present (base priority)
-  for (const p of demoProducts) {
+  for (const p of demoProducts as ProductLike[]) {
     if (p && typeof p.id === 'number' && !idMap.has(p.id)) idMap.set(p.id, p);
   }
 
   const products = Array.from(idMap.values()).sort(
     (a, b) => (a.id || 0) - (b.id || 0),
   );
-  const productsById = new Map(products.map((p) => [p.id, p]));
+  const productsById = new Map<number, ProductLike>(
+    products.map((p) => [p.id as number, p]),
+  );
 
   // indexes
-  const productsByCategory = new Map(); // category -> Set<id>
-  const productsByBrand = new Map(); // brand -> Set<id>
-  const productsByTag = new Map(); // tag -> Set<id>
-  const priceIndex = []; // sorted [{price, id}]
-  const dateIndex = []; // sorted [{time, id}] if applicable
+  const productsByCategory = new Map<string, Set<number>>(); // category -> Set<id>
+  const productsByBrand = new Map<string, Set<number>>(); // brand -> Set<id>
+  const productsByTag = new Map<string, Set<number>>(); // tag -> Set<id>
+  const priceIndex: { price: number; id: number }[] = []; // sorted [{price, id}]
+  const dateIndex: { time: number; id: number }[] = []; // sorted [{time, id}] if applicable
 
-  const addTo = (map, key, id) => {
+  const addTo = (
+    map: Map<string, Set<number>>,
+    key: string | undefined | null,
+    id: number,
+  ) => {
     if (key === undefined || key === null) return;
-    if (!map.has(key)) map.set(key, new Set());
-    map.get(key).add(id);
+    if (!map.has(key)) map.set(key, new Set<number>());
+    map.get(key)!.add(id);
   };
 
   for (const p of products) {
-    addTo(productsByCategory, p.category || 'Uncategorized', p.id);
-    addTo(productsByBrand, p.brand || 'Unknown', p.id);
+    addTo(productsByCategory, p.category || 'Uncategorized', p.id as number);
+    addTo(productsByBrand, p.brand || 'Unknown', p.id as number);
     if (Array.isArray(p.tags)) {
-      for (const t of p.tags) addTo(productsByTag, t, p.id);
+      for (const t of p.tags) addTo(productsByTag, t, p.id as number);
     }
     const priceNum =
-      typeof p.price === 'number' ? p.price : parseFloat(p.price || 0);
+      typeof p.price === 'number' ? p.price : parseFloat(String(p.price || 0));
     priceIndex.push({
       price: Number.isFinite(priceNum) ? priceNum : 0,
-      id: p.id,
+      id: p.id as number,
     });
 
-    const maybeDate = p.createdAt || p.addedAt || p.date || null;
+    const maybeDate = p.createdAt ?? p.addedAt ?? p.date ?? null;
     if (maybeDate) {
       const ts =
-        typeof maybeDate === 'number' ? maybeDate : Date.parse(maybeDate);
-      if (!Number.isNaN(ts)) dateIndex.push({ time: ts, id: p.id });
+        typeof maybeDate === 'number'
+          ? maybeDate
+          : Date.parse(String(maybeDate));
+      if (!Number.isNaN(ts)) dateIndex.push({ time: ts, id: p.id as number });
     }
   }
 
@@ -110,7 +97,10 @@ const buildIndexes = ({ prefer = 'base' } = {}) => {
   dateIndex.sort((a, b) => a.time - b.time);
 
   // add All key
-  productsByCategory.set('All', new Set(products.map((p) => p.id)));
+  productsByCategory.set(
+    'All',
+    new Set<number>(products.map((p) => p.id as number)),
+  );
 
   return {
     products,
@@ -131,7 +121,7 @@ const {
   productsByTag: PRODUCTS_BY_TAG,
   priceIndex: PRICE_INDEX,
   dateIndex: DATE_INDEX,
-} = buildIndexes({ prefer: 'base' });
+} = buildIndexes();
 
 // ---------- query API (synchronous) ----------
 /**
@@ -148,17 +138,23 @@ function getProductsByCategory(
     sortBy = 'id',
     sortDir = 'desc',
     q = undefined,
+  }: {
+    page?: number;
+    perPage?: number;
+    sortBy?: 'id' | 'price' | 'name';
+    sortDir?: 'asc' | 'desc';
+    q?: string | undefined;
   } = {},
 ) {
   // candidate ids
-  let idSet = PRODUCTS_BY_CATEGORY.get(category) || new Set();
+  let idSet = PRODUCTS_BY_CATEGORY.get(category) || new Set<number>();
 
   // if q provided, do a simple filter over the category candidates (this is faster than scanning all products)
-  let items;
+  let items: ProductLike[];
   if (q && String(q).trim()) {
     const ql = String(q).toLowerCase();
     // filter ids by checking fields
-    const filtered = [];
+    const filtered: ProductLike[] = [];
     for (const id of idSet) {
       const p = PRODUCTS_BY_ID.get(id);
       if (!p) continue;
@@ -175,7 +171,9 @@ function getProductsByCategory(
   // sort
   const dir = sortDir === 'desc' ? -1 : 1;
   if (sortBy === 'price') {
-    items.sort((a, b) => dir * ((a.price || 0) - (b.price || 0)));
+    items.sort(
+      (a, b) => dir * ((Number(a.price) || 0) - (Number(b.price) || 0)),
+    );
   } else if (sortBy === 'name') {
     items.sort(
       (a, b) =>
@@ -186,7 +184,7 @@ function getProductsByCategory(
     );
   } else {
     // id
-    items.sort((a, b) => dir * ((a.id || 0) - (b.id || 0)));
+    items.sort((a, b) => dir * ((Number(a.id) || 0) - (Number(b.id) || 0)));
   }
 
   const total = items.length;
@@ -198,22 +196,29 @@ function getProductsByCategory(
   return { items: slice, total, page: safePage, pageSize: perPage, totalPages };
 }
 
-function getProductById(id) {
-  return PRODUCTS_BY_ID.get(id);
+function getProductById(id?: number | string | null) {
+  const key = Number(id);
+  if (Number.isNaN(key)) return undefined;
+  return PRODUCTS_BY_ID.get(key);
 }
 
 function searchProducts(
-  q,
+  q: string | undefined | null,
   { page = 1, perPage = 24, sortBy = 'id', sortDir = 'desc' } = {},
 ) {
   const query = String(q || '')
     .trim()
     .toLowerCase();
   if (!query)
-    return getProductsByCategory('All', { page, perPage, sortBy, sortDir });
+    return getProductsByCategory('All', {
+      page,
+      perPage,
+      sortBy: sortBy as any,
+      sortDir: sortDir as 'asc' | 'desc', // Fix TS2322: Cast string to union type
+    });
 
   // For search, scan ALL_PRODUCTS but this can be optimized later with inverted index
-  const results = [];
+  const results: ProductLike[] = [];
   for (const p of ALL_PRODUCTS) {
     const hay =
       `${p.name || ''} ${p.brand || ''} ${p.description || ''}`.toLowerCase();
@@ -222,7 +227,9 @@ function searchProducts(
 
   const dir = sortDir === 'desc' ? -1 : 1;
   if (sortBy === 'price') {
-    results.sort((a, b) => dir * ((a.price || 0) - (b.price || 0)));
+    results.sort(
+      (a, b) => dir * ((Number(a.price) || 0) - (Number(b.price) || 0)),
+    );
   } else if (sortBy === 'name') {
     results.sort(
       (a, b) =>
@@ -232,7 +239,7 @@ function searchProducts(
         }),
     );
   } else {
-    results.sort((a, b) => dir * ((a.id || 0) - (b.id || 0)));
+    results.sort((a, b) => dir * ((Number(a.id) || 0) - (Number(b.id) || 0)));
   }
 
   const total = results.length;

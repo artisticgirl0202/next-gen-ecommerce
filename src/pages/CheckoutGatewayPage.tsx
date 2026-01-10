@@ -1,77 +1,8 @@
-// "use client";
+'use client';
 
-// import { motion } from "framer-motion";
-// import { User, UserPlus, Zap } from "lucide-react";
-// import { useNavigate } from "react-router-dom";
-
-// export default function CheckoutGatewayPage() {
-//   const navigate = useNavigate();
-
-//   return (
-//     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 pt-32">
-//       <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
-
-//         {/* 회원 주문 섹션 */}
-//         <motion.div
-//           initial={{ opacity: 0, x: -20 }}
-//           animate={{ opacity: 1, x: 0 }}
-//           className="bg-slate-900/40 border border-white/5 p-10 rounded-[3rem] backdrop-blur-xl flex flex-col items-center text-center space-y-6 hover:border-cyan-500/30 transition-all"
-//         >
-//           <div className="w-20 h-20 bg-cyan-500/10 rounded-full flex items-center justify-center text-cyan-500">
-//             <User size={40} />
-//           </div>
-//           <div>
-//             <h2 className="text-2xl font-black uppercase italic text-white">Member Checkout</h2>
-//             <p className="text-slate-500 text-sm mt-2 font-mono">Get rewards & track operations</p>
-//           </div>
-//           <div className="w-full space-y-3 pt-4">
-//             <button
-//               onClick={() => navigate("/login")}
-//               className="w-full py-4 bg-cyan-600 hover:bg-white text-white hover:text-black rounded-2xl font-black uppercase text-sm transition-all flex items-center justify-center gap-2"
-//             >
-//               Login <Zap size={16} />
-//             </button>
-//             <button
-//               onClick={() => navigate("/signup")} // 혹은 authOverlay 트리거
-//               className="w-full py-4 bg-white/5 hover:bg-white/10 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all"
-//             >
-//               Create Account
-//             </button>
-//           </div>
-//         </motion.div>
-
-//         {/* 비회원 주문 섹션 */}
-//         <motion.div
-//           initial={{ opacity: 0, x: 20 }}
-//           animate={{ opacity: 1, x: 0 }}
-//           className="bg-white/[0.02] border border-dashed border-white/10 p-10 rounded-[3rem] flex flex-col items-center text-center space-y-6 hover:bg-white/[0.04] transition-all"
-//         >
-//           <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-slate-400">
-//             <UserPlus size={40} />
-//           </div>
-//           <div>
-//             <h2 className="text-2xl font-black uppercase italic text-white">Guest Checkout</h2>
-//             <p className="text-slate-500 text-sm mt-2 font-mono">No account required</p>
-//           </div>
-//           <div className="w-full pt-4">
-//             <button
-//               onClick={() => navigate("/checkout?guest=true")}
-//               className="w-full py-4 bg-white/10 hover:bg-white text-white hover:text-black rounded-2xl font-black uppercase text-sm transition-all"
-//             >
-//               Continue as Guest
-//             </button>
-//           </div>
-//         </motion.div>
-
-//       </div>
-//     </div>
-//   );
-// }
-"use client";
-
-import { motion } from "framer-motion";
-import { ArrowLeft, ShieldCheck, User, UserPlus, Zap } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { motion } from 'framer-motion';
+import { ArrowLeft, ShieldCheck, User, UserPlus, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function CheckoutGatewayPage() {
   const navigate = useNavigate();
@@ -83,7 +14,6 @@ export default function CheckoutGatewayPage() {
 
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14 relative z-10 w-full flex-1 flex flex-col">
-
         {/* HEADER SECTION (CartPage와 통일감 유지) */}
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 sm:mb-12 lg:mb-16">
           <div className="flex items-start gap-4 sm:gap-6">
@@ -94,15 +24,14 @@ export default function CheckoutGatewayPage() {
                          transition-all duration-300 cursor-pointer flex-shrink-0
                          border border-white/10 rounded-full hover:bg-cyan-500/20 hover:border-cyan-500/30"
             >
-              <ArrowLeft
-                className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400 group-hover:text-cyan-300 transition-colors"
-              />
+              <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400 group-hover:text-cyan-300 transition-colors" />
             </button>
 
             <div className="flex flex-col">
               <div className="flex items-center gap-3 mb-2 sm:mb-3">
                 <span className="text-cyan-400 text-[10px] sm:text-xs font-black tracking-[0.2em] uppercase px-2 sm:px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-md flex items-center gap-2">
-                  <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4" /> Secure // Gateway
+                  <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4" /> Secure //
+                  Gateway
                 </span>
               </div>
 
@@ -119,7 +48,6 @@ export default function CheckoutGatewayPage() {
         {/* CONTENT SECTION: Center Grid */}
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10 max-w-5xl">
-
             {/* OPTION 1: MEMBER CHECKOUT (Highlighted) */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -131,27 +59,29 @@ export default function CheckoutGatewayPage() {
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent opacity-50" />
 
               <div className="relative mb-6 sm:mb-8">
-                 <div className="w-20 h-20 sm:w-24 sm:h-24 bg-cyan-500/10 rounded-full flex items-center justify-center text-cyan-400 border border-cyan-500/20 group-hover:scale-110 transition-transform duration-500">
-                    <User className="w-8 h-8 sm:w-10 sm:h-10" />
-                 </div>
-                 <div className="absolute inset-0 rounded-full border border-dashed border-cyan-500/30 animate-[spin_10s_linear_infinite] opacity-50" />
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-cyan-500/10 rounded-full flex items-center justify-center text-cyan-400 border border-cyan-500/20 group-hover:scale-110 transition-transform duration-500">
+                  <User className="w-8 h-8 sm:w-10 sm:h-10" />
+                </div>
+                <div className="absolute inset-0 rounded-full border border-dashed border-cyan-500/30 animate-[spin_10s_linear_infinite] opacity-50" />
               </div>
 
-              <h2 className="text-2xl sm:text-3xl font-black uppercase italic text-white tracking-tighter mb-2">Member Access</h2>
+              <h2 className="text-2xl sm:text-3xl font-black uppercase italic text-white tracking-tighter mb-2">
+                Member Access
+              </h2>
               <p className="text-slate-400 text-xs sm:text-sm font-mono tracking-wide mb-8">
                 Save progress, earn core rewards & track shipments.
               </p>
 
               <div className="w-full space-y-4 mt-auto">
                 <button
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate('/login')}
                   className="w-full py-4 sm:py-5 bg-cyan-500 hover:bg-white text-black font-black uppercase text-xs sm:text-sm tracking-[0.2em] rounded-2xl
                              transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.5)] flex items-center justify-center gap-2"
                 >
                   System Login <Zap size={16} fill="currentColor" />
                 </button>
                 <button
-                  onClick={() => navigate("/signup")}
+                  onClick={() => navigate('/signup')}
                   className="w-full py-4 sm:py-5 border border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-2xl font-bold uppercase text-[10px] sm:text-xs tracking-[0.2em] transition-all"
                 >
                   Create New ID
@@ -168,38 +98,39 @@ export default function CheckoutGatewayPage() {
                          rounded-[2.5rem] p-8 sm:p-10 lg:p-12 transition-all duration-300 flex flex-col items-center text-center"
             >
               <div className="relative mb-6 sm:mb-8">
-                 <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/5 rounded-full flex items-center justify-center text-slate-500 group-hover:text-white transition-colors duration-300">
-                    <UserPlus className="w-8 h-8 sm:w-10 sm:h-10" />
-                 </div>
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/5 rounded-full flex items-center justify-center text-slate-500 group-hover:text-white transition-colors duration-300">
+                  <UserPlus className="w-8 h-8 sm:w-10 sm:h-10" />
+                </div>
               </div>
 
-              <h2 className="text-2xl sm:text-3xl font-black uppercase italic text-slate-200 tracking-tighter mb-2">Guest Access</h2>
+              <h2 className="text-2xl sm:text-3xl font-black uppercase italic text-slate-200 tracking-tighter mb-2">
+                Guest Access
+              </h2>
               <p className="text-slate-500 text-xs sm:text-sm font-mono tracking-wide mb-8">
                 Quick checkout. No data retention protocol.
               </p>
 
               <div className="w-full mt-auto">
                 <button
-                  onClick={() => navigate("/checkout?guest=true")}
+                  onClick={() => navigate('/checkout?guest=true')}
                   className="w-full py-4 sm:py-5 bg-slate-800/50 hover:bg-white hover:text-black border border-white/10 text-white rounded-2xl
                              font-black uppercase text-xs sm:text-sm tracking-[0.2em] transition-all group-hover:border-transparent"
                 >
                   Continue as Guest
                 </button>
-                <div className="h-14 sm:h-[68px] hidden md:block" /> {/* Spacing spacer to align with left buttons */}
+                <div className="h-14 sm:h-[68px] hidden md:block" />{' '}
+                {/* Spacing spacer to align with left buttons */}
               </div>
             </motion.div>
-
           </div>
         </div>
 
         {/* Footer decoration */}
         <div className="mt-10 flex justify-center gap-2 opacity-20">
-            <div className="w-2 h-2 rounded-full bg-cyan-500" />
-            <div className="w-2 h-2 rounded-full bg-slate-500" />
-            <div className="w-2 h-2 rounded-full bg-slate-500" />
+          <div className="w-2 h-2 rounded-full bg-cyan-500" />
+          <div className="w-2 h-2 rounded-full bg-slate-500" />
+          <div className="w-2 h-2 rounded-full bg-slate-500" />
         </div>
-
       </div>
     </div>
   );

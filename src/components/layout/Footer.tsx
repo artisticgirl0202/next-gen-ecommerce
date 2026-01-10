@@ -1,7 +1,7 @@
 // next-gen-ecommerce/src/components/layout/Footer.tsx
-"use client";
+'use client';
 
-import { motion } from "framer-motion";
+import { motion } from 'framer-motion';
 import {
   Github,
   Instagram,
@@ -10,34 +10,52 @@ import {
   MapPin,
   Phone,
   Twitter,
-  Zap
-} from "lucide-react";
+  Zap,
+} from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   // 소셜 미디어 링크 데이터
   const socialLinks = [
-    { icon: <Twitter size={18} />, href: "#", label: "Twitter" },
-    { icon: <Instagram size={18} />, href: "#", label: "Instagram" },
-    { icon: <Linkedin size={18} />, href: "#", label: "LinkedIn" },
-    { icon: <Github size={18} />, href: "#", label: "Github" },
+    { icon: <Twitter size={18} />, href: '#', label: 'Twitter' },
+    { icon: <Instagram size={18} />, href: '#', label: 'Instagram' },
+    { icon: <Linkedin size={18} />, href: '#', label: 'LinkedIn' },
+    { icon: <Github size={18} />, href: '#', label: 'Github' },
   ];
 
   // 푸터 링크 섹션 데이터
   const footerSections = [
     {
-      title: "SHOP",
-      links: ["Computing Devices", "Mobile & Wearables", "Audio & Sound", "AI Processors", "Neural Modules"]
+      title: 'SHOP',
+      links: [
+        'Computing Devices',
+        'Mobile & Wearables',
+        'Audio & Sound',
+        'AI Processors',
+        'Neural Modules',
+      ],
     },
     {
-      title: "SUPPORT",
-      links: ["Order Status", "Shipping & Delivery", "Returns", "Payment Options", "Contact Us"]
+      title: 'SUPPORT',
+      links: [
+        'Order Status',
+        'Shipping & Delivery',
+        'Returns',
+        'Payment Options',
+        'Contact Us',
+      ],
     },
     {
-      title: "COMPANY",
-      links: ["About TECH.CO", "Our Technology", "Sustainability", "Careers", "Press"]
-    }
+      title: 'COMPANY',
+      links: [
+        'About TECH.CO',
+        'Our Technology',
+        'Sustainability',
+        'Careers',
+        'Press',
+      ],
+    },
   ];
 
   return (
@@ -46,10 +64,8 @@ const Footer = () => {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[1px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent opacity-50" />
 
       <div className="max-w-[1440px] mx-auto px-4 md:px-8">
-
         {/* 상단: 메인 그리드 레이아웃 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 mb-16">
-
           {/* 1. 브랜드 정보 & 로고 (lg: 4칸 차지) */}
           <div className="lg:col-span-4 flex flex-col gap-6">
             <div className="flex items-center gap-2 group cursor-default w-fit">
@@ -111,7 +127,10 @@ const Footer = () => {
 
             <div className="flex flex-col gap-3">
               <div className="relative group">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-colors" size={16} />
+                <Mail
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-colors"
+                  size={16}
+                />
                 <input
                   type="email"
                   placeholder="Enter your email"
@@ -119,16 +138,13 @@ const Footer = () => {
                 />
               </div>
               <motion.button
-
                 whileTap={{ scale: 0.98 }}
                 className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2.5 rounded-lg text-sm shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all flex items-center justify-center gap-2 group"
               >
                 <span>Subscribe</span>
-
               </motion.button>
             </div>
           </div>
-
         </div>
 
         {/* 하단 구분선 */}
@@ -137,11 +153,16 @@ const Footer = () => {
         {/* 하단: 카피라이트 & 소셜 아이콘 */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-sm">
           <p className="text-slate-600 text-center md:text-left">
-            &copy; {currentYear} TECH.CO Inc. All rights reserved. <br className="hidden sm:block md:hidden"/>
+            &copy; {currentYear} TECH.CO Inc. All rights reserved.{' '}
+            <br className="hidden sm:block md:hidden" />
             <span className="hidden sm:inline mx-2 text-slate-700">|</span>
-            <a href="#" className="hover:text-slate-300 transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-slate-300 transition-colors">
+              Privacy Policy
+            </a>
             <span className="mx-2 text-slate-700">|</span>
-            <a href="#" className="hover:text-slate-300 transition-colors">Terms of Service</a>
+            <a href="#" className="hover:text-slate-300 transition-colors">
+              Terms of Service
+            </a>
           </p>
 
           <div className="flex items-center gap-4">
@@ -157,7 +178,6 @@ const Footer = () => {
             ))}
           </div>
         </div>
-
       </div>
     </footer>
   );
