@@ -12,7 +12,7 @@ export type Recommendation = Product & {
 
 /** API_BASE: 환경변수 사용 (끝의 슬래시 제거) */
 const API_BASE =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
   'http://localhost:8000';
 
 /** 안전한 POST wrapper */
@@ -35,7 +35,11 @@ async function postJSON<T = unknown>(
       throw new Error(`HTTP ${res.status}: ${txt}`);
     }
     return (await res.json()) as T;
-  } catch (err) {
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw err;
+    }
+
     console.error('[postJSON] network/error', err);
     throw err;
   }

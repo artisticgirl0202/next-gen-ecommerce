@@ -18,7 +18,7 @@ import {
   Truck,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 // Global State
 import { useUserStore } from '@/store/userStore';
@@ -55,7 +55,7 @@ interface OrderDetail {
 
 const TAX_RATE = 0.1;
 const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string) ?? 'http://localhost:8000';
+  (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8000';
 
 function lookupProductMeta(productId: number) {
   const idNum = Number(productId);
