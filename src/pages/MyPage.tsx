@@ -4,19 +4,23 @@
 import { fetchHybridRecommendations } from '@/api/recommend';
 import ProductCard from '@/components/product/ProductCard';
 import ProductDetailModal from '@/components/product/ProductDetailModal';
+import demoProductsRaw from '@/data/demo_products_500.json';
 import { getProductById } from '@/data/products_indexed';
+import type { OrderShape } from '@/store/orderStore';
 import useOrderStore from '@/store/orderStore';
 import { useUserStore } from '@/store/userStore';
+import type { Recommendation } from '@/types/recommendation';
+
 import { motion } from 'framer-motion';
 import {
   Activity,
   Archive,
   ArrowLeft,
+  Calendar,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Edit,
-  ExternalLink,
   History,
   MapPin,
   Package,
@@ -45,17 +49,45 @@ export default function MyPage({ currentUser }: MyPageProps) {
   const { login, getCurrentUser } = useUserStore();
   const setOrder = useOrderStore((s) => s.setOrder);
 
-  const [recs, setRecs] = useState<any[]>([]);
-  const [loadingRecs, setLoadingRecs] = useState(false);
+  const [recs, setRecs] = useState<Recommendation[]>([]);
+  const [recsLoading, setRecsLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const sliderRef = useRef<HTMLDivElement | null>(null);
 
+  // circuit-board path — use import.meta.url fallback to reduce 404s in some bundlers
+  const circuitBoardUrl = (() => {
+    try {
+      return new URL('/circuit-board.svg', import.meta.url).href;
+    } catch (e) {
+      return '/circuit-board.svg';
+    }
+  })();
+
   // --- [데이터 초기화 로직] ---
   useEffect(() => {
-    if (currentUser?.email) login(currentUser.email, currentUser.name);
+    if (currentUser?.email) {
+      try {
+        // try common signature
+        // @ts-ignore
+        login(currentUser.email, currentUser.name);
+      } catch (e) {
+        try {
+          // try object signature
+          // @ts-ignore
+          login({
+            id: currentUser.id,
+            email: currentUser.email,
+            name: currentUser.name,
+          });
+        } catch {
+          // non-fatal
+        }
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.email, login]);
 
+  // getCurrentUser() returns the UserData defined in the store (which has profile but not `id`)
   const userData = getCurrentUser();
   const orders = userData?.orders ?? [];
   const hasAddress =
@@ -83,8 +115,9 @@ export default function MyPage({ currentUser }: MyPageProps) {
   const syncOrderFeedbackApi = async (payload: {
     userId: string;
     orderId: string;
+    action: string;
   }) => {
-    const url = `${API_BASE_URL}/orders/sync-feedback`;
+    const url = `${API_BASE_URL}/api/ai/feedback`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -111,54 +144,96 @@ export default function MyPage({ currentUser }: MyPageProps) {
         return;
       }
 
-      setLoadingRecs(true);
+      setRecsLoading(true);
       try {
+        // 안전하게 product id 추출 (여러 필드명 호환)
+        const seedProductId = Number(
+          (seedItem as any).productId ??
+            (seedItem as any).product_id ??
+            (seedItem as any).id ??
+            NaN,
+        );
+        if (!Number.isFinite(seedProductId)) {
+          console.warn('Invalid seed product id', seedItem);
+          setRecs([]);
+          return;
+        }
+
         const response: any = await fetchHybridRecommendations(
-          seedItem.productId,
+          seedProductId,
           10,
         );
 
-        // 여러 응답 형태를 수용
         let recsArray: any[] =
           response?.recommendations ??
           response?.data ??
           (Array.isArray(response) ? response : []) ??
           [];
 
-        // recsArray 요소가 단순 id(문자열 또는 숫자)일 수 있으므로 상품 객체로 보강
-        const normalizedProducts = recsArray
-          .map((it: any) => {
+        // fallback: demo products so UI doesn't stay empty
+        if (!recsArray || recsArray.length === 0) {
+          recsArray = (demoProductsRaw as any[]).slice(0, 6) || [];
+        }
+
+        const normalizedProducts: Recommendation[] = recsArray
+          .map((it: any): Recommendation | null => {
             if (!it) return null;
-            if (typeof it === 'string' || typeof it === 'number') {
-              return getProductById(it) ?? null;
-            }
-            if (it.product) return it.product;
-            if (it.id && (it.name || it.title)) return it;
-            if (it.productId) {
-              const meta = getProductById(it.productId);
+
+            // already a rich object from backend
+            if (it.id && (it.name || it.title)) {
               return {
-                id: it.productId,
-                name: it.title || meta?.name || `Product ${it.productId}`,
-                image: meta?.image || it.image || '',
-                why: it.why,
-                ...it,
-              };
+                id: it.id,
+                name: it.name ?? it.title,
+                title: it.title ?? it.name,
+                price: Number(it.price ?? 0),
+                image: it.image ?? '',
+                why: it.why ?? null,
+                confidence:
+                  typeof it.confidence === 'number' ? it.confidence : undefined,
+                // preserve any raw fields
+                raw: it,
+              } as Recommendation;
             }
+
+            // numeric/string id -> try to enrich from local index but preserve reason
+            if (typeof it === 'string' || typeof it === 'number') {
+              const meta = getProductById(Number(it));
+              if (!meta) return null;
+              return {
+                ...meta,
+                why: 'ID recall',
+                confidence: 0.2,
+              } as Recommendation;
+            }
+
+            // if backend returned product wrapper
+            if (it.product) {
+              return {
+                id: it.product.id ?? it.productId,
+                name: it.product.name ?? it.product.title,
+                price: Number(it.product.price ?? 0),
+                image: it.product.image ?? it.image ?? '',
+                why: it.why ?? it.reason ?? null,
+                confidence: it.confidence,
+                raw: it,
+              } as Recommendation;
+            }
+
             return null;
           })
-          .filter(Boolean);
+          .filter((item): item is Recommendation => item !== null);
 
-        setRecs(normalizedProducts as any[]);
+        setRecs(normalizedProducts);
       } catch (error) {
         console.error('Failed to load recommendations', error);
-        setRecs([]);
+        setRecs((demoProductsRaw as any[]).slice(0, 6) ?? []);
       } finally {
-        setLoadingRecs(false);
+        setRecsLoading(false);
       }
     };
 
     loadRecommendations();
-  }, [orders]); // orders 변경 시 다시 로드
+  }, [orders]); // keep orders dependency
 
   const scrollRecs = (dir: 'left' | 'right') => {
     if (!sliderRef.current) return;
@@ -174,23 +249,28 @@ export default function MyPage({ currentUser }: MyPageProps) {
     e.preventDefault();
     if (!order?.id) return;
 
-    // 데이터 정규화 및 보강(Enrichment)
-    const normalized = {
-      ...order,
-      items: (order.items || []).map((it: any) => {
-        const meta = getProductById(it.productId);
-        return {
-          ...it,
-          title: it.title || meta?.name || `Product ${it.productId}`,
-          image: meta?.image || it.image || '',
-        };
-      }),
+    // order 객체를 OrderShape로 변환
+    const normalized: OrderShape = {
+      id: order.id,
+      userId: order.userId ?? currentUser?.id,
+      items: (order.items || []).map((item: any) => ({
+        productId: item.productId ?? item.product_id ?? item.id,
+        qty: item.qty ?? item.quantity ?? 1,
+        price: item.price ?? 0,
+        title: item.title ?? item.name,
+        image: item.image,
+        category: item.category,
+      })),
+      total: order.total ?? order.totalAmount,
+      status: order.status,
     };
 
     setOrder(normalized);
 
-    // 사용자/주문 ID 검증
-    const userIdRaw = currentUser?.id;
+    // 사용자/주문 ID 검증 (use store fallback)
+    const storeUser = getCurrentUser?.();
+    const userIdRaw = currentUser?.id ?? storeUser?.profile?.email;
+
     if (!userIdRaw) {
       console.warn('syncOrderFeedback aborted: missing currentUser.id');
       navigate(`/orders/${normalized.id}`, { state: { order: normalized } });
@@ -201,11 +281,11 @@ export default function MyPage({ currentUser }: MyPageProps) {
       await syncOrderFeedbackApi({
         userId: String(userIdRaw),
         orderId: String(normalized.id),
+        action: 'view_details',
       });
       navigate(`/orders/${normalized.id}`, { state: { order: normalized } });
     } catch (err) {
       console.error('syncOrderFeedback failed:', err);
-      // 그래도 상세 페이지로 이동(필요에 따라 취소할 수 있음)
       navigate(`/orders/${normalized.id}`, { state: { order: normalized } });
     }
   };
@@ -223,7 +303,10 @@ export default function MyPage({ currentUser }: MyPageProps) {
   return (
     <div className="min-h-screen text-slate-200 selection:bg-cyan-500/30 relative font-sans bg-slate-950 overflow-hidden">
       {/* 회로 패턴 배경: 배포시 public/circuit-board.svg 존재 확인 */}
-      <div className="fixed inset-0 bg-[url('/circuit-board.svg')] bg-center opacity-5 mix-blend-screen pointer-events-none z-0" />
+      <div
+        className="fixed inset-0 bg-center opacity-5 mix-blend-screen pointer-events-none z-0"
+        style={{ backgroundImage: `url(${circuitBoardUrl})` }}
+      />
 
       <motion.div
         variants={containerVariants}
@@ -246,76 +329,90 @@ export default function MyPage({ currentUser }: MyPageProps) {
           variants={itemVariants}
           className="grid grid-cols-1 lg:grid-cols-3 gap-8"
         >
-          {/* [CARD 1] CITIZEN PROFILE AREA */}
-          <div className="lg:col-span-2 border border-cyan-500/20 rounded-3xl p-6 sm:p-8 relative overflow-hidden bg-slate-900/40 backdrop-blur-xl shadow-[0_0_40px_rgba(6,182,212,0.05)]">
-            {/* Top Accent Line */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
+          {/* [CARD 1] CITIZEN PROFILE AREA - OrderDetailPage 스타일 */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Header Section - OrderDetailPage 스타일 적용 */}
+            <motion.header
+              variants={itemVariants}
+              initial="hidden"
+              animate="visible"
+              className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12"
+            >
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="px-2 py-1 rounded text-[10px] font-mono font-bold uppercase tracking-widest border bg-emerald-950/50 border-emerald-500/30 text-emerald-400">
+                    VERIFIED USER
+                  </span>
+                  <span className="text-slate-500 text-xs font-mono uppercase tracking-widest flex items-center gap-2">
+                    <Calendar size={12} /> Member Since
+                  </span>
+                </div>
+                <h1 className="text-3xl sm:text-5xl font-black text-white italic uppercase tracking-tighter">
+                  {currentUser.name}
+                  <span className="text-slate-600"> #{currentUser.id}</span>
+                </h1>
+              </div>
 
-            {/* Header Section */}
-            <h3 className="text-lg font-black text-white uppercase italic tracking-tight mb-8 flex items-center gap-2">
-              <UserCircle2 className="text-cyan-500" size={18} />{' '}
-              CITIZEN_PROFILE_DATA
-            </h3>
+              <div className="text-right md:text-left">
+                {/* Avatar with Glow Area */}
+                <div className="relative shrink-0 group inline-block">
+                  <div className="absolute inset-0 bg-cyan-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden border-2 border-cyan-500/30 bg-slate-950 shadow-2xl">
+                    {currentUser.avatar ? (
+                      <img
+                        src={currentUser.avatar}
+                        className="w-full h-full object-cover"
+                        alt="Profile"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-4xl md:text-5xl font-black bg-gradient-to-tr from-cyan-400 to-white bg-clip-text text-transparent">
+                        {currentUser.name?.[0] ?? 'U'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.header>
 
-            <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-              {/* Avatar with Glow Area */}
-              <div className="relative shrink-0 group">
-                <div className="absolute inset-0 bg-cyan-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative w-32 h-32 rounded-2xl overflow-hidden border-2 border-cyan-500/30 bg-slate-950 shadow-2xl">
-                  {currentUser.avatar ? (
-                    <img
-                      src={currentUser.avatar}
-                      className="w-full h-full object-cover"
-                      alt="Profile"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-5xl font-black bg-gradient-to-tr from-cyan-400 to-white bg-clip-text text-transparent">
-                      {currentUser.name[0]}
-                    </div>
-                  )}
+            {/* Info List Section */}
+            <motion.div variants={itemVariants} className="space-y-6">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-4">
+                <UserCircle2 className="text-cyan-500" size={20} />
+                <h2 className="text-xl font-black uppercase italic tracking-tight text-white">
+                  Profile Information
+                </h2>
+              </div>
+
+              <div className="space-y-3 font-mono text-sm">
+                <div className="flex justify-between items-center text-slate-400 border-b border-white/5 pb-2">
+                  <span className="text-[10px] uppercase tracking-widest text-cyan-500/70">
+                    Citizen ID
+                  </span>
+                  <span className="text-white">{currentUser.id}</span>
+                </div>
+
+                <div className="flex justify-between items-center text-slate-400 border-b border-white/5 pb-2">
+                  <span className="text-[10px] uppercase tracking-widest text-cyan-500/70">
+                    Access Link
+                  </span>
+                  <span className="text-cyan-400/80">{currentUser.email}</span>
                 </div>
               </div>
 
-              {/* Info List Section (Transaction 스타일 적용) */}
-              <div className="flex-1 w-full space-y-4">
-                <div className="space-y-3 font-mono text-sm">
-                  <div className="flex justify-between items-center text-slate-400 border-b border-white/5 pb-2">
-                    <span className="text-[10px] uppercase tracking-widest text-cyan-500/70">
-                      Legal Name
-                    </span>
-                    <span className="text-xl font-bold text-white italic uppercase tracking-tighter">
-                      {currentUser.name}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center text-slate-400 border-b border-white/5 pb-2">
-                    <span className="text-[10px] uppercase tracking-widest text-cyan-500/70">
-                      Citizen ID
-                    </span>
-                    <span className="text-white">{currentUser.id}</span>
-                  </div>
-
-                  <div className="flex justify-between items-center text-slate-400">
-                    <span className="text-[10px] uppercase tracking-widest text-cyan-500/70">
-                      Access Link
-                    </span>
-                    <span className="text-cyan-400/80">
-                      {currentUser.email}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action Buttons inside stylized box */}
-                <div className="pt-4 flex flex-wrap gap-3">
-                  <button className="flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition-all text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+              {/* Action Buttons inside stylized box */}
+              <div className="pt-4 flex flex-wrap gap-3">
+                <button className="relative flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition-all text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.4)] overflow-hidden">
+                  <span className="relative z-10 flex items-center gap-2">
                     <Edit size={14} /> Update_Profile
-                  </button>
-                  <button className="flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-950/30 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-900/40 transition-all text-[10px] font-black uppercase tracking-widest">
+                  </span>
+                </button>
+                <button className="relative flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-950/30 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-900/40 transition-all text-[10px] font-black uppercase tracking-widest overflow-hidden">
+                  <span className="relative z-10 flex items-center gap-2">
                     <Wallet size={14} /> Ledger_Payment
-                  </button>
-                </div>
+                  </span>
+                </button>
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* [CARD 2] SHIPPING DATA AREA */}
@@ -348,12 +445,14 @@ export default function MyPage({ currentUser }: MyPageProps) {
               </div>
             </div>
 
-            <button className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 group">
-              <Settings
-                size={14}
-                className="group-hover:rotate-90 transition-transform duration-500"
-              />
-              Modify_Locator_Settings
+            <button className="relative w-full py-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 overflow-hidden">
+              <span className="relative z-10 flex items-center gap-2">
+                <Settings
+                  size={14}
+                  className="transition-transform duration-500 group-hover:rotate-90"
+                />
+                Modify_Locator_Settings
+              </span>
             </button>
           </div>
         </motion.section>
@@ -440,9 +539,9 @@ export default function MyPage({ currentUser }: MyPageProps) {
                   </div>
                   <button
                     onClick={onDetailsClick(order)}
-                    className="w-full md:w-auto px-8 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold uppercase tracking-widest hover:bg-cyan-500 hover:text-black hover:border-cyan-400 transition-all flex items-center justify-center gap-2 z-10 group/btn"
+                    className="relative w-full md:w-auto px-8 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold uppercase tracking-widest hover:bg-cyan-500 hover:text-black hover:border-cyan-400 transition-all flex items-center justify-center gap-2 z-10 overflow-hidden"
                   >
-                    Details{' '}
+                    <span className="relative z-10">Details</span>
                   </button>
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 </div>
@@ -456,101 +555,79 @@ export default function MyPage({ currentUser }: MyPageProps) {
           variants={itemVariants}
           className="pt-8 border-t border-white/5"
         >
-          {/* 스크롤바 숨김 CSS (컴포넌트 범위) */}
-          <style>
-            {`
-      /* hide scrollbar for WebKit (Chrome, Safari) */
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      /* hide scrollbar for Firefox */
-      .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
-    `}
-          </style>
-
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-black uppercase italic flex items-center gap-3 tracking-tight text-white">
-              <Sparkles
-                className="text-cyan-400"
-                fill="currentColor"
-                size={20}
-              />{' '}
-              Neural Recommendations
-            </h2>
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex text-[10px] font-mono text-slate-500 uppercase tracking-widest items-center gap-2 mr-4">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <h2 className="text-xl sm:text-2xl font-black uppercase italic flex items-center gap-3 tracking-tight text-white">
+                <Sparkles
+                  className="text-cyan-400"
+                  fill="currentColor"
+                  size={20}
+                />{' '}
+                Neural Recommendations
+              </h2>
+              <div className="self-start sm:self-auto px-3 py-1 flex items-center gap-2">
                 <Activity
                   size={12}
                   className="animate-pulse text-emerald-500"
-                />{' '}
-                System Optimized
+                />
+                <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest">
+                  System Optimized
+                </span>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => scrollRecs('left')}
-                  className="p-2 rounded-full border border-white/10 bg-white/5 text-cyan-400 hover:bg-cyan-500 hover:text-black hover:border-cyan-400 transition-all duration-300"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button
-                  onClick={() => scrollRecs('right')}
-                  className="p-2 rounded-full border border-white/10 bg-white/5 text-cyan-400 hover:bg-cyan-500 hover:text-black hover:border-cyan-400 transition-all duration-300"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </div>
+            </div>
+
+            <div className="flex gap-4 self-end sm:self-auto">
+              <button
+                onClick={() => scrollRecs('left')}
+                className="p-2 rounded-full border border-white/10 bg-white/5 text-cyan-400 hover:bg-cyan-500 hover:text-black hover:border-cyan-400 transition-all duration-300"
+                aria-label="Scroll Left"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <button
+                onClick={() => scrollRecs('right')}
+                className="p-2 rounded-full border border-white/10 bg-white/5 text-cyan-400 hover:bg-cyan-500 hover:text-black hover:border-cyan-400 transition-all duration-300"
+                aria-label="Scroll Right"
+              >
+                <ChevronRight size={24} />
+              </button>
             </div>
           </div>
 
-          {/* outer wrapper: overflow-hidden -> 숨김 처리 */}
-          <div className="relative overflow-hidden pb-8">
-            {/* inner scrollable area: 실제로 스크롤되며 스크롤바는 숨김(no-scrollbar) */}
-            <div
-              ref={sliderRef}
-              className="no-scrollbar flex gap-6 overflow-x-auto snap-x scroll-smooth"
-              // 선택적: 마우스 휠로 가로 스크롤이 되는 것을 막고 싶으면 아래 핸들러 활성화
-              // onWheel={(e) => { e.currentTarget.scrollBy({ left: e.deltaY, behavior: 'smooth' }); e.preventDefault(); }}
-              style={{ WebkitOverflowScrolling: 'touch' }}
-            >
-              {loadingRecs ? (
-                [1, 2, 3, 4].map((i) => (
+          <div
+            ref={sliderRef}
+            className="flex gap-4 sm:gap-6 overflow-hidden pb-6 snap-x scroll-smooth"
+          >
+            {recsLoading
+              ? [1, 2, 3, 4, 5, 6].map((i) => (
                   <div
                     key={i}
-                    className="w-72 h-96 bg-white/5 rounded-[1.5rem] animate-pulse shrink-0 border border-white/5"
+                    className="min-w-[280px] sm:min-w-[320px] aspect-[3/4] bg-white/5 rounded-[1.5rem] animate-pulse border border-white/5 snap-center"
                   />
                 ))
-              ) : recs.length === 0 ? (
-                <div className="text-slate-500 p-4">
-                  No recommendations available.
-                </div>
-              ) : (
-                recs.map((item: any) => (
+              : recs.map((product) => (
                   <div
-                    key={item.id ?? String(Math.random())}
-                    className="snap-start shrink-0 w-72 flex flex-col gap-3 group"
+                    key={product.id}
+                    className="min-w-[280px] sm:min-w-[320px] snap-center h-full flex flex-col gap-2"
                   >
-                    <div
-                      className="cursor-pointer transition-transform duration-300 hover:scale-[1.02]"
-                      onClick={() => setSelectedProduct(item)}
-                    >
-                      <ProductCard product={item} />
-                    </div>
-                    {item.why && (
-                      <div className="px-3 py-2 bg-slate-900/80 border border-cyan-500/20 rounded-lg flex items-start gap-2 backdrop-blur-md">
-                        <ExternalLink
-                          size={10}
-                          className="text-cyan-500 mt-0.5 shrink-0"
-                        />
-                        <p className="text-[9px] text-cyan-100 font-mono uppercase leading-tight line-clamp-2">
+                    <ProductCard
+                      product={product}
+                      onOpen={() => setSelectedProduct(product)}
+                    />
+
+                    {/* ✅ 추천 이유 복원 */}
+                    {product.why && (
+                      <div className="md:hidden px-3 py-2 rounded-xl bg-slate-900/80 border border-cyan-500/20">
+                        <p className="text-[10px] font-mono text-cyan-200 leading-tight">
                           <span className="text-cyan-400 font-bold mr-1">
                             AI_REASON:
                           </span>
-                          {item.why}
+                          {product.why}
                         </p>
                       </div>
                     )}
                   </div>
-                ))
-              )}
-            </div>
+                ))}
           </div>
         </motion.section>
       </motion.div>

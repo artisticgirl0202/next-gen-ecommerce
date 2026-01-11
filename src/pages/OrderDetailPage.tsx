@@ -1,4 +1,3 @@
-// src/pages/OrderDetailPage.tsx
 'use client';
 
 import { motion } from 'framer-motion';
@@ -19,7 +18,7 @@ import {
   Truck,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
 // Global State
 import { useUserStore } from '@/store/userStore';
@@ -31,10 +30,7 @@ import ProductDetailModal from '@/components/product/ProductDetailModal';
 import { CATEGORY_PRODUCTS } from '@/data/categoryData';
 import demoProductsRaw from '@/data/demo_products_500.json';
 import { getProductById } from '@/data/products_indexed';
-
-// ------------------------------------------------------------------
-// Type Definitions
-// ------------------------------------------------------------------
+import type { Recommendation } from '@/types/recommendation';
 
 interface OrderItemView {
   id: number;
@@ -61,16 +57,10 @@ const TAX_RATE = 0.1;
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string) ?? 'http://localhost:8000';
 
-// ------------------------------------------------------------------
-// Helper Functions (Data Enrichment)
-// ------------------------------------------------------------------
-
-/** 로컬 데이터베이스에서 상품 메타정보(이미지, 이름) 조회 */
 function lookupProductMeta(productId: number) {
   const idNum = Number(productId);
   if (!Number.isFinite(idNum)) return null;
 
-  // 1. Indexed List
   try {
     const idx = getProductById(idNum);
     if (idx) return idx;
@@ -78,18 +68,15 @@ function lookupProductMeta(productId: number) {
     /* ignore */
   }
 
-  // 2. Category List
   const cat = CATEGORY_PRODUCTS.find((p) => Number(p.id) === idNum);
   if (cat) return cat;
 
-  // 3. Demo JSON
   const demo = (demoProductsRaw as any[]).find((p) => Number(p.id) === idNum);
   if (demo) return demo;
 
   return null;
 }
 
-/** API/Store의 Raw Item을 UI용 View Model로 변환 */
 function enrichItem(it: any): OrderItemView {
   const pid = Number(it?.productId ?? it?.product_id ?? it?.id) || 0;
   const meta = pid ? lookupProductMeta(pid) : null;
@@ -106,44 +93,65 @@ function enrichItem(it: any): OrderItemView {
   };
 }
 
-// ------------------------------------------------------------------
-// Main Component
-// ------------------------------------------------------------------
-
 export default function OrderDetailPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // ✅ 1. Store Access (Zustand)
+  // Store access
   const { getCurrentUser } = useUserStore();
 
-  // Local State
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState<'STORE' | 'API' | null>(null);
 
-  // Recommendations State
-  const [recs, setRecs] = useState<any[]>([]);
+  const [recs, setRecs] = useState<Recommendation[]>([]);
   const [recsLoading, setRecsLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
 
-  // slider ref for recs scroll
   const sliderRef = useRef<HTMLDivElement | null>(null);
 
   const formatCurrency = (v: number | undefined) =>
     v !== undefined && v !== null ? v.toLocaleString() : '0';
 
-  // ----------------------------------------------------------------
-  // Logic 1: Data Fetching Strategy (Store First -> API Fallback)
-  // ----------------------------------------------------------------
   useEffect(() => {
     if (!orderId) return;
 
     setLoading(true);
     setError(null);
 
-    // [Step 1] Try to find in Global Store
+    // 1. Check Navigation State (Passed from MyPage)
+    const stateOrder = location.state?.order;
+
+    if (stateOrder && String(stateOrder.id) === String(orderId)) {
+      console.log(
+        `🚀 [Nav State] Loaded Order #${orderId} from Location State.`,
+      );
+
+      const enrichedItems = (stateOrder.items || []).map(enrichItem);
+
+      const mappedOrder: OrderDetail = {
+        id: String(stateOrder.id),
+        date: stateOrder.date
+          ? new Date(stateOrder.date).toLocaleString()
+          : new Date().toLocaleString(),
+        status: stateOrder.status,
+        items: enrichedItems,
+        subtotal: stateOrder.total,
+        total: stateOrder.total,
+        shippingAddress:
+          getCurrentUser()?.profile?.addresses?.[0] || 'Seoul, Korea (Default)',
+        paymentMethod: 'Credit Card (**** 1234)',
+      };
+
+      setOrder(mappedOrder);
+      setDataSource('STORE');
+      setLoading(false);
+      return; // Exit early if found in state
+    }
+
+    // 2. Check User Store Cache
     const user = getCurrentUser();
     const cachedOrder = user?.orders?.find(
       (o: any) => String(o.id) === String(orderId),
@@ -151,12 +159,12 @@ export default function OrderDetailPage() {
 
     if (cachedOrder) {
       console.log(`⚡ [Cache Hit] Loaded Order #${orderId} from User Store.`);
-
-      // 스토어 데이터 포맷팅
       const enrichedItems = (cachedOrder.items || []).map(enrichItem);
       const mappedOrder: OrderDetail = {
         id: String(cachedOrder.id),
-        date: new Date(cachedOrder.date).toLocaleString(),
+        date: cachedOrder.date
+          ? new Date(cachedOrder.date).toLocaleString()
+          : new Date().toLocaleString(),
         status: cachedOrder.status,
         items: enrichedItems,
         subtotal: (cachedOrder as any).subtotal ?? cachedOrder.total,
@@ -165,19 +173,19 @@ export default function OrderDetailPage() {
           user?.profile?.addresses?.[0] || 'Seoul, Korea (Default)',
         paymentMethod: 'Credit Card (**** 1234)',
       };
-
       setOrder(mappedOrder);
       setDataSource('STORE');
       setLoading(false);
     } else {
-      // [Step 2] Not in Store -> Fetch from API
+      // 3. Fallback to API Fetch
       console.warn(
-        `📡 [Cache Miss] Order #${orderId} not found in Store. Fetching API...`,
+        `📡 [Cache Miss] Order #${orderId} not found. Fetching API...`,
       );
       fetchOrderFromApi(String(orderId));
     }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId, getCurrentUser]);
+  }, [orderId, getCurrentUser, location.state]);
 
   const fetchOrderFromApi = async (id: string) => {
     try {
@@ -185,8 +193,6 @@ export default function OrderDetailPage() {
       if (!res.ok) throw new Error(`API Error: ${res.status}`);
 
       const apiData = await res.json();
-
-      // API 데이터 매핑
       const enrichedItems = (apiData.items || []).map(enrichItem);
       const subtotal = enrichedItems.reduce(
         (acc: number, cur: any) => acc + cur.price * cur.qty,
@@ -196,13 +202,15 @@ export default function OrderDetailPage() {
       const mappedOrder: OrderDetail = {
         id: String(apiData.id),
         orderNo: apiData.orderNo,
-        date: new Date(apiData.createdAt).toLocaleString(),
+        date: apiData.createdAt
+          ? new Date(apiData.createdAt).toLocaleString()
+          : new Date().toLocaleString(),
         status: apiData.status,
         items: enrichedItems,
         subtotal: subtotal,
-        total: apiData.totalAmount,
-        shippingAddress: 'Gangnam-gu, Seoul, KR',
-        paymentMethod: 'Credit Card',
+        total: apiData.totalAmount ?? apiData.total,
+        shippingAddress: apiData.shippingAddress || 'Gangnam-gu, Seoul, KR',
+        paymentMethod: apiData.paymentMethod || 'Credit Card',
       };
 
       setOrder(mappedOrder);
@@ -215,32 +223,67 @@ export default function OrderDetailPage() {
     }
   };
 
-  // ----------------------------------------------------------------
-  // Logic 2: Neural Recommendations (unchanged logic - stays)
-  // ----------------------------------------------------------------
   useEffect(() => {
     if (!order?.items?.[0]) return;
 
-    const seedId = order.items[0].id;
+    const seedId = Number(order.items[0].id);
+    if (!Number.isFinite(seedId)) return;
+
     const loadRecs = async () => {
       setRecsLoading(true);
       try {
-        const data = await fetchHybridRecommendations(seedId, 4);
-        const list = Array.isArray(data) ? data : (data?.recommendations ?? []);
-        setRecs(list);
+        const resp: any = await fetchHybridRecommendations(seedId, 4);
+        console.debug('OrderDetail recs raw:', resp);
+        let list: any[] =
+          resp?.recommendations ??
+          resp?.data ??
+          (Array.isArray(resp) ? resp : []);
+        if (!list || list.length === 0) {
+          list = (demoProductsRaw as any[]).slice(0, 4) || [];
+        }
+
+        const normalized: Recommendation[] = list
+          .map((it: any): Recommendation | null => {
+            if (!it) return null;
+
+            if (it.id && (it.name || it.title)) {
+              return {
+                id: it.id,
+                name: it.name ?? it.title,
+                title: it.title ?? it.name,
+                price: Number(it.price ?? 0),
+                image: it.image ?? '',
+                why: it.why ?? null,
+                confidence: it.confidence,
+              } as Recommendation;
+            }
+
+            if (typeof it === 'number' || typeof it === 'string') {
+              const meta = getProductById(Number(it));
+              if (!meta) return null;
+              return {
+                ...meta,
+                why: 'ID recall',
+                confidence: 0.2,
+              } as Recommendation;
+            }
+
+            return null;
+          })
+          .filter((item): item is Recommendation => item !== null);
+
+        setRecs(normalized);
       } catch (e) {
-        console.error('Failed to load recommendations', e);
-        setRecs([]);
+        console.error('Failed to load recommendations (OrderDetail)', e);
+        setRecs((demoProductsRaw as any[]).slice(0, 4) ?? []);
       } finally {
         setRecsLoading(false);
       }
     };
+
     loadRecs();
   }, [order]);
 
-  // ----------------------------------------------------------------
-  // Helpers for recs slider
-  // ----------------------------------------------------------------
   const scrollRecs = (dir: 'left' | 'right') => {
     if (!sliderRef.current) return;
     const distance = sliderRef.current.clientWidth * 0.6;
@@ -250,21 +293,15 @@ export default function OrderDetailPage() {
     });
   };
 
-  // ----------------------------------------------------------------
-  // Render
-  // ----------------------------------------------------------------
   const itemVariants = {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0 },
   };
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30 relative overflow-hidden">
-      {/* Background (absolute -z-10 to avoid compositor bug) */}
       <div className="absolute inset-0 -z-10 bg-[url('/circuit-board.svg')] bg-center opacity-5 mix-blend-screen pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14 relative z-10">
-        {/* Navigation */}
         <button
           onClick={() => navigate(-1)}
           className="group mb-8 flex items-center gap-3 text-slate-500 hover:text-cyan-400 transition-colors w-fit"
@@ -274,7 +311,6 @@ export default function OrderDetailPage() {
           </div>
         </button>
 
-        {/* Loading State */}
         {loading && (
           <div className="animate-pulse space-y-12">
             <div className="flex justify-between items-end">
@@ -287,7 +323,6 @@ export default function OrderDetailPage() {
           </div>
         )}
 
-        {/* Error State */}
         {error && !loading && (
           <div className="rounded-2xl bg-rose-500/5 border border-rose-500/20 p-8 text-center flex flex-col items-center">
             <AlertTriangle className="text-rose-500 mb-4" size={40} />
@@ -304,10 +339,8 @@ export default function OrderDetailPage() {
           </div>
         )}
 
-        {/* Success State */}
         {order && !loading && (
           <div>
-            {/* Header Section */}
             <motion.header
               variants={itemVariants}
               initial="hidden"
@@ -317,11 +350,7 @@ export default function OrderDetailPage() {
               <div>
                 <div className="flex items-center gap-3 mb-3">
                   <span
-                    className={`px-2 py-1 rounded text-[10px] font-mono font-bold uppercase tracking-widest border ${
-                      dataSource === 'STORE'
-                        ? 'bg-emerald-950/50 border-emerald-500/30 text-emerald-400'
-                        : 'bg-cyan-950/50 border-cyan-500/30 text-cyan-400'
-                    }`}
+                    className={`px-2 py-1 rounded text-[10px] font-mono font-bold uppercase tracking-widest border ${dataSource === 'STORE' ? 'bg-emerald-950/50 border-emerald-500/30 text-emerald-400' : 'bg-cyan-950/50 border-cyan-500/30 text-cyan-400'}`}
                   >
                     {dataSource === 'STORE' ? ' Local Cache' : ' Network Fetch'}
                   </span>
@@ -335,17 +364,12 @@ export default function OrderDetailPage() {
                 </h1>
               </div>
 
-              {/* Status Badge */}
               <div className="text-right md:text-left">
                 <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">
                   Current Status
                 </div>
                 <div
-                  className={`flex items-center justify-end md:justify-start gap-2 text-lg font-bold uppercase italic tracking-tight ${
-                    order.status === 'Delivered'
-                      ? 'text-emerald-400'
-                      : 'text-cyan-400'
-                  }`}
+                  className={`flex items-center justify-end md:justify-start gap-2 text-lg font-bold uppercase italic tracking-tight ${order.status === 'Delivered' ? 'text-emerald-400' : 'text-cyan-400'}`}
                 >
                   {order.status === 'Delivered' ? (
                     <CheckCircle2 size={20} />
@@ -357,9 +381,7 @@ export default function OrderDetailPage() {
               </div>
             </motion.header>
 
-            {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-              {/* Left Column: Item List */}
               <motion.div
                 variants={itemVariants}
                 className="lg:col-span-2 space-y-6"
@@ -377,7 +399,6 @@ export default function OrderDetailPage() {
                       key={item.id}
                       className="group relative bg-slate-900/40 border border-white/5 rounded-[1.5rem] sm:rounded-[2rem] transition-all duration-500 hover:border-cyan-500/50 hover:bg-slate-900/60 hover:shadow-[0_0_40px_rgba(6,182,212,0.1)] w-full flex flex-col sm:flex-row p-3 sm:p-5 gap-4 sm:gap-6 items-stretch sm:items-center"
                     >
-                      {/* Image */}
                       <div className="w-full sm:w-28 aspect-square rounded-2xl bg-slate-900 overflow-hidden border border-white/5 relative shrink-0">
                         {item.image ? (
                           <img
@@ -392,7 +413,6 @@ export default function OrderDetailPage() {
                         )}
                       </div>
 
-                      {/* Detail */}
                       <div className="flex-1 flex flex-col justify-between py-1">
                         <div>
                           <h3 className="text-lg font-bold text-white uppercase italic tracking-tight mb-1">
@@ -420,12 +440,9 @@ export default function OrderDetailPage() {
                 </div>
               </motion.div>
 
-              {/* Right Column: Transaction Summary */}
               <motion.div variants={itemVariants} className="space-y-6">
-                {/* Financial Card */}
                 <div className="border border-cyan-500/20 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-[0_0_40px_rgba(6,182,212,0.05)]">
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
-
                   <h3 className="text-lg font-black text-white uppercase italic tracking-tight mb-6 flex items-center gap-2">
                     <ShieldCheck className="text-cyan-500" size={18} />{' '}
                     Transaction Data
@@ -439,6 +456,7 @@ export default function OrderDetailPage() {
                     <div className="flex justify-between text-slate-400">
                       <span>TAX ESTIMATE</span>
                       <span>
+                        {' '}
                         ${formatCurrency((order.subtotal || 0) * TAX_RATE)}
                       </span>
                     </div>
@@ -459,7 +477,6 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
 
-                {/* Shipping Card */}
                 <div className="border border-white/5 rounded-3xl p-6 sm:p-8 relative bg-white/[0.02]">
                   <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <MapPin size={14} /> Destination
@@ -468,7 +485,6 @@ export default function OrderDetailPage() {
                     {order.shippingAddress}
                   </p>
 
-                  {/* ✅ Tracking Button (Responsive) */}
                   <div className="mt-6">
                     <button className="rounded-xl font-bold uppercase tracking-widest transition-all duration-300 bg-white/5 border border-white/10 text-slate-200 hover:bg-cyan-500 hover:text-black hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] group/btn flex items-center justify-center w-full sm:w-auto px-6 py-3 text-xs z-10">
                       Track Delivery
@@ -478,15 +494,10 @@ export default function OrderDetailPage() {
               </motion.div>
             </div>
 
-            {/* ---------------------------
-                Neural Recommendations Section
-                (REPLACED: MyPage style)
-                --------------------------- */}
             <motion.section
               variants={itemVariants}
               className="pt-8 border-t border-white/5"
             >
-              {/* Section Header */}
               <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-6">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <h2 className="text-xl sm:text-2xl font-black uppercase italic flex items-center gap-3 tracking-tight text-white">
@@ -497,9 +508,7 @@ export default function OrderDetailPage() {
                     />{' '}
                     Neural Recommendations
                   </h2>
-
-                  {/* System Optimized Badge - Moved here */}
-                  <div className="self-start sm:self-auto px-3 py-1  flex items-center gap-2">
+                  <div className="self-start sm:self-auto px-3 py-1 flex items-center gap-2">
                     <Activity
                       size={12}
                       className="animate-pulse text-emerald-500"
@@ -510,7 +519,6 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
 
-                {/* Navigation Buttons */}
                 <div className="flex gap-4 self-end sm:self-auto">
                   <button
                     onClick={() => scrollRecs('left')}
@@ -529,7 +537,6 @@ export default function OrderDetailPage() {
                 </div>
               </div>
 
-              {/* Slider Container with Ref */}
               <div
                 ref={sliderRef}
                 className="flex gap-4 sm:gap-6 overflow-hidden pb-6 snap-x scroll-smooth"
@@ -554,13 +561,9 @@ export default function OrderDetailPage() {
                     ))}
               </div>
             </motion.section>
-            {/* ---------------------------
-                End Neural Recommendations
-                --------------------------- */}
           </div>
         )}
 
-        {/* Selected product modal (outside order conditional) */}
         {selectedProduct && (
           <ProductDetailModal
             product={selectedProduct}

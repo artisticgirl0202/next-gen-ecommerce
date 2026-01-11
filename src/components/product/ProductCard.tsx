@@ -1,4 +1,4 @@
-//ProductCard
+//src\components\product\ProductCard.tsx
 import type { Product } from '@/types';
 import { motion } from 'framer-motion';
 import { Box, Cpu, Star, Zap } from 'lucide-react';
@@ -113,7 +113,7 @@ export default function ProductCard({
         group relative flex flex-col h-full w-full
         bg-slate-900/60 backdrop-blur-xl
         border border-white/5 rounded-2xl
-        overflow-hidden transition-all duration-300
+        overflow-hidden transition-[border-color,box-shadow] duration-300
         hover:border-cyan-500/40 hover:shadow-[0_0_30px_rgba(6,182,212,0.1)]
         ${compact ? 'text-xs' : ''} 
       `}
@@ -153,7 +153,7 @@ export default function ProductCard({
 
         {/* AI Reason (Slide Up) */}
         {product.why && (
-          <div className="absolute inset-x-0 bottom-0 z-20 p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
+          <div className="hidden md:block absolute inset-x-0 bottom-0 z-20 p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
             <div className="bg-slate-900/95 border border-cyan-500/30 p-2.5 rounded-lg shadow-2xl">
               <p className="text-[8px] text-cyan-400 font-bold mb-1 uppercase tracking-wider flex items-center gap-1">
                 <Cpu size={8} /> Neural Match
@@ -218,7 +218,7 @@ export default function ProductCard({
             </span>
 
             {/* Subtle Scanline Animation */}
-            <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover/btn:animate-[shimmer_0.8s_infinite] z-0" />
+            <div className="absolute inset-0 bg-white/20 -translate-x-full " />
           </button>
         )}
       </div>

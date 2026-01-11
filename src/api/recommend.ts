@@ -4,27 +4,23 @@ import type { Product } from '@/types';
 
 const demoProducts = demoProductsRaw as unknown as Product[];
 
-// 환경변수에서 API_BASE를 읽되, 끝의 슬래시를 제거
-const API_BASE = (
-  import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
-).replace(/\/$/, '');
-
+/** Recommendation 타입 */
 export type Recommendation = Product & {
   why?: string;
   confidence?: number;
 };
 
-/**
- * 안전한 fetch POST wrapper
- * - 네트워크 에러를 던짐
- * - 응답이 ok가 아니면 에러 던짐
- */
+/** API_BASE: 환경변수 사용 (끝의 슬래시 제거) */
+const API_BASE =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
+  'http://localhost:8000';
+
+/** 안전한 POST wrapper */
 async function postJSON<T = unknown>(
   url: string,
   body?: unknown,
   opts: { signal?: AbortSignal } = {},
 ): Promise<T> {
-  // 디버깅: 호출 URL 및 짧은 바디 로깅
   try {
     console.debug('[postJSON] POST', url, body ? { body } : {});
     const res = await fetch(url, {
@@ -32,7 +28,7 @@ async function postJSON<T = unknown>(
       headers: { 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
       signal: opts.signal,
-      credentials: 'include', // 필요시 쿠키 전송
+      credentials: 'include',
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
@@ -40,21 +36,17 @@ async function postJSON<T = unknown>(
     }
     return (await res.json()) as T;
   } catch (err) {
-    // 네트워크 계층 오류(예: ECONNREFUSED)도 상위로 던집니다.
     console.error('[postJSON] network/error', err);
     throw err;
   }
 }
 
-/*
- * 로컬 fallback 추천 엔진
- */
 function getLocalFallback(productId: number, topN: number) {
   const current = demoProducts.find((p) => p.id === productId);
   if (!current) {
     return demoProducts
       .slice(0, topN)
-      .map((p) => ({ ...p, why: 'Featured System' }));
+      .map((p) => ({ ...p, why: 'Featured System', confidence: 0.75 }));
   }
 
   const currentCats = Array.isArray(current.categories)
@@ -86,66 +78,62 @@ function getLocalFallback(productId: number, topN: number) {
 
 /**
  * fetchRecommendations
- * - API 호출을 시도하되,
- * - 배포된 프론트엔드에서 실수로 `localhost`를 가리키고 있다면 호출 대신 로컬 fallback을 반환
- * - 네트워크/서버 오류 시 로컬 fallback을 반환
+ * - 정상 응답이면 { recommendations: Recommendation[] } 반환
+ * - 문제(네트워크, 형식 불일치)시 로컬 fallback 반환
  */
 export async function fetchRecommendations(
   productId: number,
-  user_id?: number,
+  user_id?: number | string,
   topN = 6,
   alpha?: number,
   beta?: number,
   signal?: AbortSignal,
 ): Promise<{ recommendations: Recommendation[] }> {
   try {
-    // 배포 환경 보호: 브라우저에서 실행 중이고 호스트가 localhost가 아니면
+    // 배포된 프론트가 localhost API를 호출하지 못하도록 보호
     if (typeof window !== 'undefined' && window.location) {
       const currentHost = window.location.hostname;
       if (currentHost !== 'localhost' && API_BASE.includes('localhost')) {
         console.warn(
-          '[fetchRecommendations] Skipping call to localhost from deployed frontend. ' +
-            `window.host=${currentHost} API_BASE=${API_BASE}. Returning local fallback.`,
+          '[fetchRecommendations] Skipping call to localhost from deployed frontend.',
+          `window.host=${currentHost} API_BASE=${API_BASE}`,
         );
         return { recommendations: getLocalFallback(productId, topN) };
       }
     }
 
-    const base = API_BASE;
-    const url = `${base}/api/recommend/hybrid`;
-    const payload = {
+    const url = `${API_BASE.replace(/\/$/, '')}/api/recommend/hybrid`;
+    const payload: Record<string, unknown> = {
       product_id: productId,
-      user_id: user_id,
-      k: topN,
-      alpha,
-      beta,
+      top_n: topN,
     };
+    if (user_id !== undefined) payload.user_id = user_id;
+    if (alpha !== undefined) payload.alpha = alpha;
+    if (beta !== undefined) payload.beta = beta;
 
-    // 디버깅 로깅
     console.debug('[fetchRecommendations] calling', url, payload);
 
-    const data: unknown = await postJSON<unknown>(url, payload, { signal });
+    const raw = await postJSON<unknown>(url, payload, { signal });
 
-    // API 응답이 recommendations 형태인지 확인 (안전하게 검사)
-    if (Array.isArray(data)) {
-      return { recommendations: data as Recommendation[] };
+    // 다양한 응답 형태 정규화
+    if (Array.isArray(raw)) {
+      return { recommendations: raw as Recommendation[] };
     }
-    if (
-      typeof data === 'object' &&
-      data !== null &&
-      'recommendations' in data &&
-      Array.isArray((data as { recommendations?: unknown }).recommendations)
-    ) {
-      return {
-        recommendations: (data as { recommendations: Recommendation[] })
-          .recommendations,
-      };
+    if (raw && typeof raw === 'object') {
+      const obj = raw as Record<string, unknown>;
+      if (Array.isArray(obj.recommendations)) {
+        return { recommendations: obj.recommendations as Recommendation[] };
+      }
+      if (Array.isArray(obj.items)) {
+        return { recommendations: obj.items as Recommendation[] };
+      }
+      if (Array.isArray(obj.data)) {
+        return { recommendations: obj.data as Recommendation[] };
+      }
     }
 
-    // 응답 형태가 예상과 다른 경우 예외로 처리하여 fallback으로 넘어가게 함
     throw new Error('Invalid API Response shape');
   } catch (err: unknown) {
-    // Abort 처리: DOMException인지 확인
     if ((err as DOMException)?.name === 'AbortError') {
       return { recommendations: [] };
     }
@@ -157,17 +145,78 @@ export async function fetchRecommendations(
   }
 }
 
+/** 간단한 wrapper: 프론트에서 이 함수를 사용하면 일관된 결과를 받음 */
 export async function fetchHybridRecommendations(
-  productId: number,
-  limit = 6,
+  productId: number | string,
+  k = 6,
   signal?: AbortSignal,
 ): Promise<{ recommendations: Recommendation[] }> {
-  return fetchRecommendations(
-    productId,
-    undefined,
-    limit,
-    undefined,
-    undefined,
-    signal,
-  );
+  const pid = Number(productId);
+
+  if (!Number.isFinite(pid)) {
+    return {
+      recommendations: getLocalFallback(0, k).map((p) => ({
+        id: p.id,
+        name: p.name,
+        title: p.name, // p.title 대신 p.name 사용
+        price: p.price,
+        image: p.image,
+        why: p.why ?? '기본 추천',
+        confidence: p.confidence ?? 0.3,
+      })),
+    };
+  }
+
+  const url = `${API_BASE.replace(/\/$/, '')}/api/recommend/hybrid`;
+
+  // ✅ curl과 100% 동일
+  const payload = {
+    product_id: pid,
+    k,
+  };
+
+  try {
+    const data: any = await postJSON(url, payload, { signal });
+
+    if (!Array.isArray(data)) {
+      throw new Error('Hybrid API response is not an array');
+    }
+
+    const normalized: Recommendation[] = data.map((item: any) => ({
+      id: Number(item.id),
+      name: item.name ?? item.title ?? `Product ${item.id}`,
+      title: item.title ?? item.name,
+      price: Number(item.price ?? 0),
+      image: item.image ?? '',
+
+      // 🔑 추천 이유 복원 (가장 중요)
+      why:
+        item.why ??
+        item.reason ??
+        '이 상품과 유사한 구매·콘텐츠 패턴 기반 추천',
+
+      confidence:
+        typeof item.confidence === 'number'
+          ? item.confidence
+          : typeof item.score === 'number'
+            ? item.score
+            : 0.4,
+    }));
+
+    return { recommendations: normalized };
+  } catch (err) {
+    console.warn('[fetchHybridRecommendations] fallback used', err);
+
+    return {
+      recommendations: getLocalFallback(pid, k).map((p) => ({
+        id: p.id,
+        name: p.name,
+        title: p.name, // p.title 대신 p.name 사용
+        price: p.price,
+        image: p.image,
+        why: p.why ?? '대체 추천',
+        confidence: p.confidence ?? 0.25,
+      })),
+    };
+  }
 }
