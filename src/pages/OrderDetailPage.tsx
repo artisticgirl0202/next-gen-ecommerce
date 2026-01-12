@@ -18,8 +18,8 @@ import {
   Truck,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-
 // Global State
 import { useUserStore } from '@/store/userStore';
 
@@ -486,8 +486,42 @@ export default function OrderDetailPage() {
                   </p>
 
                   <div className="mt-6">
-                    <button className="rounded-xl font-bold uppercase tracking-widest transition-all duration-300 bg-white/5 border border-white/10 text-slate-200 hover:bg-cyan-500 hover:text-black hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] group/btn flex items-center justify-center w-full sm:w-auto px-6 py-3 text-xs z-10">
-                      Track Delivery
+                    <button
+                      className="
+    relative group/btn overflow-hidden rounded-xl z-10
+    /* 레이아웃 & 크기 */
+    w-full sm:w-auto px-6 py-3 flex items-center justify-center
+    
+    /* 1. 배경 & 테두리: 어두운 투명 패널 + Cyan 틴트 */
+    bg-gradient-to-r from-cyan-950/40 to-cyan-900/20
+    border border-cyan-500/20
+    
+    /* 2. 호버 효과: 밝기 증가 + 그림자 글로우 */
+    hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
+    hover:shadow-[0_0_25px_-5px_rgba(6,182,212,0.4)]
+    
+    /* 애니메이션 기본 설정 */
+    transition-all duration-300 ease-out cursor-pointer active:scale-95
+  "
+                    >
+                      {/* 텍스트 컨텐츠 */}
+                      <span
+                        className="
+    relative z-10 flex items-center gap-2
+    text-xs font-black uppercase tracking-[0.2em] 
+    text-cyan-400 group-hover/btn:text-cyan-100 
+    transition-colors duration-300 pt-0.5
+  "
+                      >
+                        {/* (선택사항) 아이콘을 넣는다면 여기에: <Scan size={14} /> */}
+                        Track Delivery
+                      </span>
+
+                      {/* 3. 배경 스캔 애니메이션: 추적 중임을 암시하는 빛의 흐름 */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_1.5s_infinite] pointer-events-none" />
+
+                      {/* 4. 하단 레이저 인디케이터 */}
+                      <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-0 group-hover/btn:opacity-100 blur-[2px] transition-opacity duration-300" />
                     </button>
                   </div>
                 </div>
@@ -564,12 +598,14 @@ export default function OrderDetailPage() {
           </div>
         )}
 
-        {selectedProduct && (
-          <ProductDetailModal
-            product={selectedProduct}
-            onClose={() => setSelectedProduct(null)}
-          />
-        )}
+        {selectedProduct &&
+          createPortal(
+            <ProductDetailModal
+              product={selectedProduct}
+              onClose={() => setSelectedProduct(null)}
+            />,
+            document.body, // 모달을 현재 컴포넌트가 아닌 body 태그 바로 아래에 렌더링
+          )}
       </div>
     </div>
   );

@@ -1,164 +1,116 @@
-//src\components\product\ProductCard.tsx
+// src/components/product/ProductCard.tsx
+import { CATEGORIES } from '@/data/categoryData';
 import type { Product } from '@/types';
 import { motion } from 'framer-motion';
-import { Box, Cpu, Star, Zap } from 'lucide-react';
-// 1. 카테고리 데이터 가져오기
-import { CATEGORIES } from '@/data/categoryData';
+import { Activity, Box, Cpu, Star } from 'lucide-react';
 
 // Recommendation 타입 정의
 type Recommendation = Product & {
   why?: string;
   confidence?: number;
-  title?: string; // OrderDetailPage 호환성을 위해 추가
+  title?: string;
 };
 
 type Props = {
   product: Recommendation;
   onOpen?: (p: Product) => void;
-  compact?: boolean; // ✅ 수정: compact prop 추가 (타입 에러 해결)
+  compact?: boolean;
 };
 
-/**
- * 🛠️ 스마트 카테고리 매핑 함수
- */
 function resolveCategory(product: Product): string {
-  // 1순위: 상품의 카테고리 배열 중 첫 번째가 표준 리스트에 있다면 사용
   const firstCat = product.categories?.[0];
-  if (firstCat && CATEGORIES.includes(firstCat)) {
-    return firstCat;
-  }
-
-  // 2순위: 단일 category 필드가 있고 표준 리스트에 있다면 사용
+  if (firstCat && CATEGORIES.includes(firstCat)) return firstCat;
   const singleCat = (product as any).category;
-  if (singleCat && CATEGORIES.includes(singleCat)) {
-    return singleCat;
-  }
-
-  // 데이터 안전 장치: name이 없을 경우 대비
+  if (singleCat && CATEGORIES.includes(singleCat)) return singleCat;
   const safeName = product.name || (product as any).title || '';
   const lowerName = safeName.toLowerCase();
-
-  // 3순위: 상품명(name)을 분석하여 표준 카테고리 추론 (키워드 매칭)
-  if (
-    lowerName.includes('laptop') ||
-    lowerName.includes('pc') ||
-    lowerName.includes('mac')
-  )
+  if (lowerName.includes('laptop') || lowerName.includes('pc'))
     return 'Computing Devices';
-  if (
-    lowerName.includes('phone') ||
-    lowerName.includes('watch') ||
-    lowerName.includes('galaxy') ||
-    lowerName.includes('iphone')
-  )
+  if (lowerName.includes('phone') || lowerName.includes('watch'))
     return 'Mobile & Wearables';
-  if (
-    lowerName.includes('audio') ||
-    lowerName.includes('sound') ||
-    lowerName.includes('headphone') ||
-    lowerName.includes('speaker') ||
-    lowerName.includes('earbud')
-  )
+  if (lowerName.includes('audio') || lowerName.includes('sound'))
     return 'Audio Devices';
-  if (
-    lowerName.includes('camera') ||
-    lowerName.includes('cam') ||
-    lowerName.includes('lens')
-  )
+  if (lowerName.includes('camera') || lowerName.includes('lens'))
     return 'Cameras & Imaging';
-  if (
-    lowerName.includes('monitor') ||
-    lowerName.includes('display') ||
-    lowerName.includes('tv')
-  )
+  if (lowerName.includes('monitor') || lowerName.includes('display'))
     return 'Video & Display';
-  if (
-    lowerName.includes('game') ||
-    lowerName.includes('console') ||
-    lowerName.includes('controller')
-  )
-    return 'Gaming Gear';
-  if (
-    lowerName.includes('cable') ||
-    lowerName.includes('charger') ||
-    lowerName.includes('battery')
-  )
+  if (lowerName.includes('game')) return 'Gaming Gear';
+  if (lowerName.includes('cable') || lowerName.includes('charger'))
     return 'Power & Charging';
-
-  // 4순위: 그래도 없으면 기존 데이터 사용 혹은 기본값
   return firstCat || singleCat || 'AI & Next-Gen';
 }
 
 export default function ProductCard({
   product,
   onOpen,
-  compact = false, // ✅ 수정: 기본값 설정
+  compact = false,
 }: Props) {
-  // ✅ 연결된 카테고리 로직 사용
   const displayCategory = resolveCategory(product);
-
-  // ✅ 호환성 처리: OrderDetailPage에서 넘어오는 객체는 name 대신 title을 가질 수 있음
-  const displayName = product.name || product.title || 'Unknown Product';
-
+  const displayName = product.name || product.title || 'Unknown Unit';
   const isSvg =
     typeof product.image === 'string' &&
     product.image.toLowerCase().endsWith('.svg');
 
   return (
     <motion.article
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
       className={`
         group relative flex flex-col h-full w-full
-        bg-slate-900/60 backdrop-blur-xl
-        border border-white/5 rounded-2xl
-        overflow-hidden transition-[border-color,box-shadow] duration-300
-        hover:border-cyan-500/40 hover:shadow-[0_0_30px_rgba(6,182,212,0.1)]
+        bg-slate-950/80 backdrop-blur-md
+        rounded-2xl overflow-hidden
+        border border-white/5
+        transition-all duration-500 ease-out
+        hover:border-cyan-500/40 hover:shadow-[0_0_30px_-5px_rgba(6,182,212,0.25)]
+        hover:bg-slate-950/90
         ${compact ? 'text-xs' : ''} 
       `}
     >
-      {/* --- Image Section (Compact Square) --- */}
-      <div className="relative aspect-square overflow-hidden bg-slate-950/80">
-        {/* Hover Overlay */}
-        <div className="absolute inset-0 bg-cyan-500/0 group-hover:bg-cyan-500/10 transition-colors duration-500 z-10 pointer-events-none" />
+      {/* --- Image Section (Sleek HUD View) --- */}
+      <div className="relative w-full aspect-square overflow-hidden bg-slate-900/50">
+        {/* Holographic Scan Effect */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/0 via-cyan-400/5 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-10 pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-10" />
 
         <img
           src={product.image}
           alt={displayName}
           loading="lazy"
           className={`
-            w-full h-full transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-105
-            ${isSvg ? 'object-contain p-6' : 'object-cover'}
+            w-full h-full transition-transform duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]
+            group-hover:scale-105
+            ${isSvg ? 'object-contain p-8' : 'object-cover'}
           `}
         />
 
-        {/* 🏷️ Category Badge */}
-        <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-950/90 border border-white/10 backdrop-blur-md shadow-lg">
-          <Box size={10} className="text-cyan-400" />
+        {/* 🏷️ System Badge (Capsule Style) */}
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 bg-slate-950/60 border border-white/10 backdrop-blur-md rounded-full group-hover:border-cyan-500/30 transition-colors">
+          <Box
+            size={10}
+            className="text-slate-400 group-hover:text-cyan-400 transition-colors"
+          />
           <span className="text-[8px] font-mono font-bold text-slate-300 uppercase tracking-wider">
-            {displayCategory}
+            {displayCategory.slice(0, 12)}
           </span>
         </div>
 
-        {/* AI Confidence (Minimalist) */}
+        {/* ⚡ AI Confidence (Glowing Capsule) */}
         {product.confidence && (
-          <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 px-1.5 py-1 rounded-md bg-cyan-950/90 border border-cyan-500/20 backdrop-blur-md">
-            <Zap size={10} className="text-cyan-400 fill-cyan-400" />
-            <span className="text-[8px] font-mono font-bold text-cyan-100">
+          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 pl-1.5 pr-2 py-1 bg-cyan-950/60 border border-cyan-500/20 backdrop-blur-md rounded-full shadow-[0_0_10px_rgba(6,182,212,0.1)] group-hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-shadow">
+            <Activity size={10} className="text-cyan-400" />
+            <span className="text-[9px] font-mono font-bold text-cyan-100">
               {Math.round(product.confidence * 100)}%
             </span>
           </div>
         )}
 
-        {/* AI Reason (Slide Up) */}
+        {/* 🗨️ AI Reason Overlay (Smooth Slide) */}
         {product.why && (
-          <div className="hidden md:block absolute inset-x-0 bottom-0 z-20 p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
-            <div className="bg-slate-900/95 border border-cyan-500/30 p-2.5 rounded-lg shadow-2xl">
-              <p className="text-[8px] text-cyan-400 font-bold mb-1 uppercase tracking-wider flex items-center gap-1">
-                <Cpu size={8} /> Neural Match
-              </p>
-              <p className="text-[9px] text-slate-300 leading-snug line-clamp-2">
+          <div className="hidden md:block absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+            <div className="flex items-start gap-2 p-2 rounded-xl bg-cyan-950/30 border border-cyan-500/20 backdrop-blur-sm">
+              <Cpu size={12} className="text-cyan-400 shrink-0 mt-0.5" />
+              <p className="text-[10px] text-cyan-100/90 font-mono leading-relaxed line-clamp-2">
                 {product.why}
               </p>
             </div>
@@ -166,38 +118,48 @@ export default function ProductCard({
         )}
       </div>
 
-      {/* --- Content Section (Tight & Clean) --- */}
-      <div className="flex flex-col flex-grow p-3 gap-2 bg-gradient-to-b from-slate-900/50 to-white/[0.02]">
+      {/* --- Content Section (Data Panel) --- */}
+      <div className="flex flex-col flex-grow p-4 relative">
+        {/* Subtle Glow Separator */}
+        <div className="absolute top-0 inset-x-4 h-px bg-gradient-to-r from-transparent via-white/10 group-hover:via-cyan-500/30 to-transparent transition-colors duration-500" />
+
         {/* Title & Brand */}
-        <div>
-          <h3 className="text-xs sm:text-sm font-bold text-slate-100 truncate font-sans group-hover:text-cyan-300 transition-colors">
+        <div className="mb-3 mt-1">
+          <h3 className="text-xs sm:text-sm font-bold text-slate-200 font-sans uppercase tracking-tight group-hover:text-white transition-colors line-clamp-1">
             {displayName}
           </h3>
-          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
-            {product.brand || 'UNKNOWN'}
-          </p>
-        </div>
-
-        {/* Price & Rating Row */}
-        <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-xs font-medium text-cyan-600">$</span>
-            <span className="text-base font-black text-white tracking-tight">
-              {product.price.toLocaleString()}
+          <div className="flex justify-between items-center mt-1">
+            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.15em]">
+              {product.brand || 'GENERIC'}
+            </p>
+            <span className="text-[8px] font-mono text-slate-600 group-hover:text-cyan-500/70 transition-colors">
+              ID: {product.id || 'NULL'}
             </span>
           </div>
+        </div>
 
-          <div className="flex items-center gap-1">
+        {/* Stats Interface */}
+        <div className="flex items-end justify-between mt-auto pt-3">
+          {/* Price Data */}
+          <div>
+            <div className="flex items-baseline gap-0.5 text-cyan-400 group-hover:text-cyan-300 transition-colors">
+              <span className="text-xs font-medium opacity-70">$</span>
+              <span className="text-lg font-black font-mono tracking-tighter">
+                {product.price.toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Rating Capsule */}
+          <div className="flex items-center gap-1.5 bg-slate-900/50 px-2 py-1 rounded-full border border-white/5 group-hover:border-white/10 transition-colors">
             <Star size={10} className="text-yellow-500 fill-yellow-500" />
-            <span className="text-[10px] font-bold text-slate-400 font-mono">
+            <span className="text-[10px] font-bold text-slate-300 font-mono pt-0.5">
               {product.rating ?? '4.8'}
             </span>
           </div>
         </div>
 
-        {/* ✅ Compact 모드가 아닐 때만 Access 버튼 표시
-          (Compact 모드에서는 공간 절약을 위해 숨김)
-        */}
+        {/* 🔘 Activation Button (Sleek Capsule) */}
         {!compact && (
           <button
             onClick={(e) => {
@@ -205,20 +167,21 @@ export default function ProductCard({
               onOpen?.(product);
             }}
             className="
-            w-full relative overflow-hidden rounded-lg
-            bg-white/5 border border-white/10 text-slate-300
-            hover:bg-cyan-500 hover:text-slate-950 hover:border-cyan-400 
-            transition-all duration-200 cursor-pointer
-            flex items-center justify-center gap-2
-            py-2 mt-1 group/btn
-          "
+              relative w-full mt-4 group/btn overflow-hidden rounded-xl
+              bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
+              border border-cyan-500/20
+              hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
+              focus:outline-none transition-all duration-300
+            "
           >
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] relative z-10">
-              Access
-            </span>
+            <div className="relative z-10 py-2.5 flex items-center justify-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400 group-hover/btn:text-cyan-200 transition-colors pt-0.5">
+                Access
+              </span>
+            </div>
 
-            {/* Subtle Scanline Animation */}
-            <div className="absolute inset-0 bg-white/20 -translate-x-full " />
+            {/* Animated Glow Bar */}
+            <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 blur-[2px]" />
           </button>
         )}
       </div>

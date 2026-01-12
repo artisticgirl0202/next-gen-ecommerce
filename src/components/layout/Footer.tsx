@@ -139,9 +139,29 @@ const Footer = () => {
               </div>
               <motion.button
                 whileTap={{ scale: 0.98 }}
-                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2.5 rounded-lg text-sm shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all flex items-center justify-center gap-2 group"
+                className="
+    relative w-full group overflow-hidden rounded-xl py-3
+    /* 배경: 은은한 Cyan 그라디언트로 깊이감 형성 */
+    bg-gradient-to-r from-cyan-950/50 via-cyan-900/20 to-cyan-950/50
+    border border-cyan-500/30
+    /* 호버: 밝아지면서 테두리와 그림자 강화 */
+    hover:border-cyan-400/60 hover:from-cyan-500/10 hover:to-cyan-400/10
+    hover:shadow-[0_0_25px_rgba(6,182,212,0.2)]
+    transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer
+  "
               >
-                <span>Subscribe</span>
+                {/* 버튼 텍스트 내용 */}
+                <span className="relative z-10 text-sm font-black uppercase tracking-[0.2em] text-cyan-400 group-hover:text-cyan-100 transition-colors pt-0.5">
+                  Subscribe
+                </span>
+
+                {/* 아이콘이 있다면 여기에 추가 (예: <Zap size={14} className="text-cyan-500" />) */}
+
+                {/* 배경 스캔 효과 (호버 시 지나가는 빛) */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
+
+                {/* 하단 글로우 바 */}
+                <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-0 group-hover:opacity-100 blur-[2px] transition-opacity duration-300" />
               </motion.button>
             </div>
           </div>

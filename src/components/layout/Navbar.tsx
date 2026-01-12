@@ -212,15 +212,56 @@ const Navbar: React.FC<Props> = ({
           <div className="flex items-center gap-2 md:gap-4">
             <button
               onClick={() => onView('login')}
-              className="text-sm font-bold text-slate-400 hover:text-white transition-colors cursor-pointer px-2"
+              className="
+    group relative px-4 py-2 rounded-lg overflow-hidden
+    transition-all duration-300 ease-out cursor-pointer
+    /* 호버 시 배경이 아주 살짝 켜짐 */
+    hover:bg-cyan-500/5
+  "
             >
-              Sign In
+              <span className="relative z-10 flex items-center gap-2">
+                {/* 1. Power Dot: 평소엔 꺼져있다가(Slate-600) 호버 시 켜짐(Cyan-400 + Glow) */}
+                <span
+                  className="
+      w-1.5 h-1.5 rounded-full bg-slate-600 
+      group-hover:bg-cyan-400 group-hover:shadow-[0_0_8px_rgba(34,211,238,0.8)] 
+      transition-all duration-300
+    "
+                />
+
+                {/* 2. Text: 기계적인 폰트 스타일 */}
+                <span
+                  className="
+      text-xs font-black uppercase tracking-widest 
+      text-slate-500 group-hover:text-cyan-400 
+      transition-colors duration-300 pt-0.5
+    "
+                >
+                  Sign In
+                </span>
+              </span>
+
+              {/* 3. Bottom Laser Line: 호버 시 바닥에 살짝 지나가는 라인 */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[1px] bg-cyan-500/50 group-hover:w-1/2 transition-all duration-500 ease-out opacity-0 group-hover:opacity-100" />
             </button>
             <button
               onClick={() => onView('signup')}
-              className="text-sm font-bold bg-cyan-600 text-white px-4 py-2 rounded-lg hover:bg-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all active:scale-95 cursor-pointer"
+              className="
+                relative group overflow-hidden rounded-xl px-6 py-2
+                bg-slate-900/50 border border-cyan-500/30
+                hover:bg-cyan-500/10 hover:border-cyan-400/60 
+                hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.4)]
+                transition-all duration-300 ease-out active:scale-95
+                flex items-center justify-center cursor-pointer
+            "
             >
-              Sign Up
+              {/* 텍스트 스타일: 기계적인 느낌의 두꺼운 폰트 + 자간 넓힘 */}
+              <span className="relative z-10 text-xs font-black uppercase tracking-widest text-cyan-400 group-hover:text-cyan-100 transition-colors">
+                Sign Up
+              </span>
+
+              {/* 하단 글로우 바 (호버 시 나타남) */}
+              <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-0 group-hover:opacity-100 blur-[2px] transition-opacity duration-300" />
             </button>
           </div>
         )}

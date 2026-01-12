@@ -149,7 +149,6 @@ export async function fetchRecommendations(
   }
 }
 
-/** 간단한 wrapper: 프론트에서 이 함수를 사용하면 일관된 결과를 받음 */
 export async function fetchHybridRecommendations(
   productId: number | string,
   k = 6,
@@ -193,7 +192,6 @@ export async function fetchHybridRecommendations(
       price: Number(item.price ?? 0),
       image: item.image ?? '',
 
-      // 🔑 추천 이유 복원 (가장 중요)
       why:
         item.why ??
         item.reason ??
@@ -208,14 +206,18 @@ export async function fetchHybridRecommendations(
     }));
 
     return { recommendations: normalized };
-  } catch (err) {
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      return { recommendations: [] };
+    }
+
     console.warn('[fetchHybridRecommendations] fallback used', err);
 
     return {
       recommendations: getLocalFallback(pid, k).map((p) => ({
         id: p.id,
         name: p.name,
-        title: p.name, // p.title 대신 p.name 사용
+        title: p.name,
         price: p.price,
         image: p.image,
         why: p.why ?? '대체 추천',

@@ -205,7 +205,7 @@ export default function ProductDetailModal({
 
   return (
     // ... (JSX 리턴 부분은 기존 코드 그대로 유지) ...
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
       {/* 기존 JSX 내용 복사 붙여넣기 */}
       <div
         className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl cursor-default"
@@ -213,7 +213,7 @@ export default function ProductDetailModal({
       />
       <div
         ref={modalScrollRef}
-        className="relative z-10 w-full max-w-6xl max-h-[90vh] bg-gradient-to-b from-slate-950 to-slate-900 border border-cyan-500/30 rounded-[2rem] shadow-[0_0_50px_rgba(6,182,212,0.15)] flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden no-scrollbar"
+        className="relative z-[2000] w-full max-w-6xl max-h-[90vh] bg-gradient-to-b from-slate-950 to-slate-900 border border-cyan-500/30 rounded-[2rem] shadow-[0_0_50px_rgba(6,182,212,0.15)] flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden no-scrollbar"
       >
         {/* ... (이하 동일) ... */}
 
@@ -428,8 +428,18 @@ export default function ProductDetailModal({
             </div>
 
             {recsLoading ? (
-              <div className="text-cyan-500 font-mono text-[10px] animate-pulse uppercase">
-                Scanning Database...
+              <div className="flex gap-6 py-6 px-1 overflow-hidden">
+                {/* 로딩 스켈레톤 유지... */}
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="w-56 shrink-0 h-[380px] rounded-3xl bg-slate-900/30 border border-white/5 relative overflow-hidden flex items-center justify-center"
+                  >
+                    <div className="text-cyan-500/50 font-mono text-[10px] animate-pulse uppercase tracking-widest">
+                      Scanning...
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div
@@ -439,56 +449,91 @@ export default function ProductDetailModal({
                 {recommendations?.map((r) => (
                   <div
                     key={r.id}
-                    // 2) 추천 상품 네온 효과: hover 시 border 색상 변경 + shadow 추가
-                    className="w-56 shrink-0 relative bg-white/[0.03] p-5 rounded-3xl border border-white/5
-                                hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]
-                                transition-all duration-300 group"
+                    /* 1. 카드 컨테이너: flex-col을 사용하여 내용을 위에서 아래로 정렬하고 버튼을 바닥에 붙임 */
+                    className="
+          w-56 shrink-0 relative p-4 flex flex-col
+          bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-md
+          rounded-3xl border border-white/10
+          hover:border-cyan-500/40 hover:bg-slate-800/60
+          hover:shadow-[0_0_30px_-10px_rgba(6,182,212,0.3)]
+          transition-all duration-500 ease-out group
+        "
                   >
-                    {/* FOR YOU 배지: 3) 글자 크기 반응형 (text-[10px] -> sm:text-xs) */}
-                    <div className="mb-4">
-                      <h4 className="text-cyan-400 text-[10px] sm:text-xs font-light uppercase tracking-[0.2em] flex items-center gap-1.5 shadow-cyan-500/20 drop-shadow-sm">
-                        <Sparkles size={14} className="text-cyan-400" /> FOR YOU
-                      </h4>
+                    {/* --- 상단 컨텐츠 영역 (flex-1로 남은 공간 차지) --- */}
+                    <div className="flex-1 mb-3">
+                      {/* FOR YOU 배지 */}
+                      <div className="mb-3 flex justify-between items-start">
+                        <h4 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/5 border border-cyan-500/10 text-cyan-400 text-[10px] font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(6,182,212,0.1)]">
+                          <Sparkles size={10} className="text-cyan-300" /> For
+                          You
+                        </h4>
+                      </div>
+
+                      {/* 이미지 영역 */}
+                      <div className="aspect-square rounded-2xl overflow-hidden bg-slate-950/50 border border-white/5 relative mb-4 group-hover:border-cyan-500/20 transition-colors duration-500">
+                        <img
+                          src={r.image}
+                          alt={r.name}
+                          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-60" />
+                      </div>
+
+                      {/* 텍스트 정보 */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="text-[11px] font-black text-slate-200 uppercase leading-tight group-hover:text-cyan-200 transition-colors line-clamp-2">
+                            {r.name}
+                          </div>
+                          <div className="text-[11px] font-mono font-bold text-cyan-400 shrink-0">
+                            ${r.price.toLocaleString()}
+                          </div>
+                        </div>
+
+                        <div className="pt-2 mt-2 border-t border-white/5">
+                          <p className="text-[9px] leading-relaxed text-slate-500 font-medium group-hover:text-slate-400 transition-colors italic line-clamp-2">
+                            <span className="text-cyan-600/70 not-italic font-bold mr-1 text-[8px] uppercase tracking-wider">
+                              Analysis:
+                            </span>
+                            {r.why || 'Optimal match based on profile.'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* ACCESS 버튼 */}
+                    {/* --- 하단 버튼 영역 (여기에 요청하신 디자인 적용) --- */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleProductChange(r);
                       }}
-                      // 1) 커서 포인터(cursor-pointer)
-                      // 3) 크기 반응형: 모바일(px-2 py-1) -> 데스크탑(sm:px-3 sm:py-1.5), 폰트도 반응형
-                      className="absolute top-3 right-4 z-30 cursor-pointer overflow-hidden rounded-lg font-medium uppercase tracking-widest transition-all duration-300
-                                    bg-white/5 ring-[0.5px] ring-white/10 text-slate-200
-                                    hover:bg-cyan-500 hover:text-black hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]
-                                    group/btn flex items-center justify-center
-                                    px-2 py-1 text-[10px] sm:px-3 sm:py-1.5 sm:text-xs"
+                      className="
+            relative group/btn overflow-hidden rounded-xl
+            
+            /* 1. 배경 & 테두리 (Future Tech Style - 요청 사항 반영) */
+            bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
+            border border-cyan-500/20
+            
+            /* 2. 호버 효과 (Glow & Lighten) */
+            hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
+            hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]
+            focus:outline-none transition-all duration-300
+            
+            /* 3. 기본 레이아웃 */
+            flex items-center justify-center cursor-pointer gap-2
+            
+            /* 4. 크기 (w-full로 하단 꽉 채움) */
+            w-full py-2.5 sm:py-3 mt-auto
+          "
                     >
-                      <span className="relative z-10 flex items-center gap-1 cursor-pointer">
-                        ACCESS
+                      {/* 버튼 텍스트 */}
+                      <span className="relative z-10 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-cyan-400 group-hover/btn:text-white transition-colors duration-300">
+                        Access
                       </span>
+
+                      {/* 배경 스캔 효과 (로봇 테마 디테일) */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_1.5s_infinite] pointer-events-none" />
                     </button>
-
-                    <div className="aspect-square rounded-2xl overflow-hidden bg-slate-900 mt-8 mb-4">
-                      <img
-                        src={r.image}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                        alt={r.name}
-                      />
-                    </div>
-                    <div className="text-[11px] font-black text-white uppercase truncate mb-1 italic">
-                      {r.name}
-                    </div>
-                    <div className="text-[10px] font-mono text-cyan-500 mb-2">
-                      ${r.price.toLocaleString()}
-                    </div>
-
-                    <div className="mt-2 pt-2 border-t border-white/5">
-                      <p className="text-[9px] leading-tight text-slate-500 font-medium group-hover:text-cyan-300 transition-colors italic">
-                        {r.why || 'Information not specified'}
-                      </p>
-                    </div>
                   </div>
                 ))}
               </div>

@@ -349,7 +349,10 @@ export default function MyPage({ currentUser }: MyPageProps) {
                 </div>
                 <h1 className="text-3xl sm:text-5xl font-black text-white italic uppercase tracking-tighter">
                   {currentUser.name}
-                  <span className="text-slate-600"> #{currentUser.id}</span>
+                  {/* currentUser.id가 있을 때만 #ID를 표시 */}
+                  {currentUser.id && (
+                    <span className="text-slate-600"> #{currentUser.id}</span>
+                  )}
                 </h1>
               </div>
 
@@ -401,15 +404,75 @@ export default function MyPage({ currentUser }: MyPageProps) {
 
               {/* Action Buttons inside stylized box */}
               <div className="pt-4 flex flex-wrap gap-3">
-                <button className="relative flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition-all text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.4)] overflow-hidden">
-                  <span className="relative z-10 flex items-center gap-2">
-                    <Edit size={14} /> Update_Profile
+                {/* 1. Update Profile Button (Primary Hologram) */}
+                <button
+                  className="
+    relative group overflow-hidden rounded-xl px-5 py-2.5
+    /* 배경: 반투명 Cyan 그라디언트 */
+    bg-gradient-to-r from-cyan-950/40 to-cyan-900/20 
+    border border-cyan-500/30
+    /* 호버: 밝기 증가 및 글로우 효과 */
+    hover:bg-cyan-500/20 hover:border-cyan-400/60 
+    hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.4)]
+    transition-all duration-300 ease-out cursor-pointer
+  "
+                >
+                  <span
+                    className="
+    relative z-10 flex items-center gap-2 
+    text-[10px] font-black uppercase tracking-widest 
+    text-cyan-400 group-hover:text-white 
+    transition-colors duration-300 pt-0.5
+  "
+                  >
+                    <Edit
+                      size={14}
+                      className="
+      /* 1. 기계적인 회전: 45도로 확실하게 꺾어줍니다. */
+      group-hover:rotate-45 
+      /* 2. 입체감: 호버 시 아주 살짝 튀어나오는 느낌 */
+      group-hover:scale-110
+      /* 3. 서보 모터 효과: 마지막에 살짝 튕기는 베지어 곡선 */
+      transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+    "
+                    />
+                    Update_Profile
                   </span>
+
+                  {/* 호버 시 하단 레이저 바 */}
+                  <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-0 group-hover:opacity-100 blur-[1px] transition-opacity duration-300" />
                 </button>
-                <button className="relative flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-950/30 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-900/40 transition-all text-[10px] font-black uppercase tracking-widest overflow-hidden">
-                  <span className="relative z-10 flex items-center gap-2">
-                    <Wallet size={14} /> Ledger_Payment
+
+                {/* 2. Ledger Payment Button (Secondary Secure Module) */}
+                <button
+                  className="
+    relative group overflow-hidden rounded-xl px-5 py-2.5
+    /* 배경: 더 어두운 Slate 배경 (보안 느낌) */
+    bg-slate-950/60 
+    border border-white/10
+    /* 호버: Cyan 테두리와 배경 은은하게 켜짐 */
+    hover:border-cyan-500/40 hover:bg-cyan-950/30
+    transition-all duration-300 ease-out cursor-pointer
+  "
+                >
+                  <span
+                    className="
+      relative z-10 flex items-center gap-2 
+      text-[10px] font-black uppercase tracking-widest 
+      /* 평소엔 Slate-400 (비활성 느낌) -> 호버 시 Cyan-300 (활성) */
+      text-slate-400 group-hover:text-cyan-300 
+      transition-colors duration-300 pt-0.5
+    "
+                  >
+                    <Wallet
+                      size={14}
+                      className="text-slate-500 group-hover:text-cyan-400 transition-colors"
+                    />
+                    Ledger_Payment
                   </span>
+
+                  {/* 배경 스캔 효과 (데이터 처리 느낌) */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-cyan-500/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
                 </button>
               </div>
             </motion.div>
@@ -421,15 +484,18 @@ export default function MyPage({ currentUser }: MyPageProps) {
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
 
             <div>
+              {/* 1. 용어 변경: Logistic_Locator -> Shipping Destination */}
               <h3 className="text-lg font-black text-white uppercase italic tracking-tight mb-6 flex items-center gap-2">
-                <MapPin className="text-cyan-500" size={18} /> Logistic_Locator
+                <MapPin className="text-cyan-500" size={18} /> Shipping
+                Destination
               </h3>
 
               <div className="space-y-3 mb-6 font-mono text-sm">
                 <div className="flex justify-between text-slate-400 text-[10px] tracking-widest uppercase">
-                  <span>Status</span>
+                  <span>Current Node</span>
+                  {/* 2. 용어 변경: Verified -> Active Link */}
                   <span className="text-emerald-400 italic font-bold">
-                    Verified
+                    Active Link
                   </span>
                 </div>
                 <div className="h-px bg-white/10 my-2" />
@@ -439,19 +505,20 @@ export default function MyPage({ currentUser }: MyPageProps) {
                   <p className="text-sm text-cyan-100/80 leading-relaxed font-mono">
                     {hasAddress
                       ? userData.profile.addresses[0]
-                      : 'No deployment address found.'}
+                      : // 3. 문구 변경: 조금 더 자연스러운 문장으로
+                        'No shipping coordinates registered.'}
                   </p>
                 </div>
               </div>
             </div>
 
-            <button className="relative w-full py-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 overflow-hidden">
+            <button className="group relative w-full py-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 hover:bg-cyan-500/5 hover:shadow-[0_0_40px_rgba(6,182,212,0.1)] transition-all text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 overflow-hidden">
               <span className="relative z-10 flex items-center gap-2">
                 <Settings
                   size={14}
-                  className="transition-transform duration-500 group-hover:rotate-90"
+                  className="transition-transform duration-500 group-hover:rotate-45 group-hover:scale-110 "
                 />
-                Modify_Locator_Settings
+                Update Coordinates
               </span>
             </button>
           </div>
@@ -511,15 +578,12 @@ export default function MyPage({ currentUser }: MyPageProps) {
               orders.map((order: any) => (
                 <div
                   key={order.id}
-                  className="group relative bg-white/[0.02] border border-white/5 p-6 rounded-[1.5rem] hover:border-cyan-500/30 hover:bg-white/[0.04] transition-all duration-300 flex flex-col md:flex-row justify-between items-center gap-6 overflow-hidden"
+                  className="group relative bg-white/[0.02] border border-white/5 p-6 rounded-[1.5rem] hover:border-cyan-500/30 hover:bg-white/[0.04] hover:shadow-[0_0_40px_rgba(6,182,212,0.1)] transition-all duration-300 flex flex-col md:flex-row justify-between items-center gap-6 overflow-hidden"
                 >
                   <div className="flex items-center gap-8 w-full md:w-auto z-10">
                     <div className="p-4 border border-white/10 rounded-xl group-hover:border-cyan-500/20 transition-colors">
                       <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">
                         Order ID
-                      </div>
-                      <div className="font-mono text-cyan-400 font-bold tracking-wider">
-                        #{String(order.id).slice(0, 8)}
                       </div>
                     </div>
                     <div>
@@ -539,9 +603,34 @@ export default function MyPage({ currentUser }: MyPageProps) {
                   </div>
                   <button
                     onClick={onDetailsClick(order)}
-                    className="relative w-full md:w-auto px-8 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold uppercase tracking-widest hover:bg-cyan-500 hover:text-black hover:border-cyan-400 transition-all flex items-center justify-center gap-2 z-10 overflow-hidden"
+                    className="
+    relative group/btn overflow-hidden rounded-lg sm:rounded-xl
+    /* 레이아웃 & 크기 (기존 반응형 유지 + 요청된 스타일 통합) */
+    w-full md:w-auto cursor-pointer
+    
+    /* 배경 & 테두리 스타일 (New Design) */
+    bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
+    border border-cyan-500/20
+    
+    /* 호버 효과 (New Design) */
+    hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
+    focus:outline-none transition-all duration-300
+  "
                   >
-                    <span className="relative z-10">Details</span>
+                    {/* 내부 콘텐츠 래퍼 (패딩 및 정렬) */}
+                    <div className="relative z-10 flex items-center justify-center gap-2 px-6 sm:px-8 py-2 sm:py-3">
+                      <span
+                        className="
+                        text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] 
+                        text-slate-200 group-hover/btn:text-cyan-200 transition-colors pt-0.5
+                        "
+                      >
+                        Details
+                      </span>
+                    </div>
+
+                    {/* 하단 글로우 바 (선택 사항: 이전 디자인 컨셉 통일감을 위해 추가) */}
+                    <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 blur-[2px]" />
                   </button>
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 </div>
@@ -617,7 +706,7 @@ export default function MyPage({ currentUser }: MyPageProps) {
 
                     {/* ✅ 추천 이유 복원 */}
                     {product.why && (
-                      <div className="md:hidden px-3 py-2 rounded-xl bg-slate-900/80 border border-cyan-500/20">
+                      <div className="md:hidden px-3 py-2 rounded-xl bg-slate-900/80 border border-white/5">
                         <p className="text-[10px] font-mono text-cyan-200 leading-tight">
                           <span className="text-cyan-400 font-bold mr-1">
                             AI_REASON:
@@ -656,7 +745,7 @@ function StatusCard({
   color: string;
 }) {
   return (
-    <div className="p-6 rounded-[1.5rem] bg-slate-900/40 border border-white/5 backdrop-blur-sm flex flex-col items-center justify-center gap-2 group hover:border-white/20 transition-all hover:shadow-[0_0_20px_rgba(255,255,255,0.05)]">
+    <div className="p-6 rounded-[1.5rem] bg-slate-900/40 border border-white/5 backdrop-blur-sm flex flex-col items-center justify-center gap-2 group hover:border-cyan-500/50 hover:shadow-[0_0_30px_rgba(6,182,212,0.15)] transition-all">
       <div
         className={`${color} opacity-70 group-hover:opacity-100 transition-opacity`}
       >
