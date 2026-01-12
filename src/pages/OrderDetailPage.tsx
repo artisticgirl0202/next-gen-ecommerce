@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  CornerDownRight,
   CreditCard,
   MapPin,
   Package,
@@ -92,7 +93,23 @@ function enrichItem(it: any): OrderItemView {
     category: meta?.category || it?.category,
   };
 }
+const getTranslatedReason = (text: string) => {
+  if (!text) return '';
 
+  // 이미 영어인 경우 그대로 반환 (ASCII 체크)
+  if (/^[\x00-\x7F]*$/.test(text)) return text;
+
+  // 자주 나오는 한글 패턴 매핑
+  if (text.includes('콘텐츠')) return 'Content pattern match';
+  if (text.includes('유사')) return 'Based on similarity';
+  if (text.includes('대체')) return 'Alternative recommendation';
+  if (text.includes('기본')) return 'Basic recommendation';
+  if (text.includes('인기')) return 'Popular choice';
+  if (text.includes('카테고리')) return 'Category match';
+
+  // 매핑되지 않은 한글은 그대로 반환하거나, 범용 문구로 대체
+  return 'AI Suggested';
+};
 export default function OrderDetailPage() {
   const { orderId } = useParams();
   const navigate = useNavigate();
@@ -573,24 +590,58 @@ export default function OrderDetailPage() {
 
               <div
                 ref={sliderRef}
-                className="flex gap-4 sm:gap-6 overflow-hidden pb-6 snap-x scroll-smooth"
+                className="flex gap-4 sm:gap-6 overflow-x-auto overflow-y-hidden p-4 sm:p-6 snap-x scroll-smooth no-scrollbar"
               >
                 {recsLoading
                   ? [1, 2, 3, 4, 5, 6].map((i) => (
                       <div
                         key={i}
-                        className="min-w-[280px] sm:min-w-[320px] aspect-[3/4] bg-white/5 rounded-[1.5rem] animate-pulse border border-white/5 snap-center"
+                        // [변경] 로딩 스켈레톤 크기 축소 (280/320 -> 220/260)
+                        className="min-w-[220px] sm:min-w-[260px] aspect-[3/4] bg-white/5 rounded-[1.25rem] animate-pulse border border-white/5 snap-center"
                       />
                     ))
                   : recs.map((product) => (
                       <div
                         key={product.id}
-                        className="min-w-[280px] sm:min-w-[320px] snap-center h-full"
+                        // [변경] 실제 카드 컨테이너 크기 축소 (280/320 -> 220/260)
+                        className="group min-w-[220px] sm:min-w-[260px] snap-center h-full flex flex-col gap-3"
                       >
                         <ProductCard
                           product={product}
                           onOpen={() => setSelectedProduct(product)}
                         />
+
+                        {/*  개선된 AI 추천 이유 디자인 */}
+                        {product.why && (
+                          <div className="relative pl-4 pr-2 py-1 ml-2">
+                            {/* 장식용: 회로도 라인 (왼쪽 테두리 & 그라디언트) */}
+                            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-cyan-500/50 via-cyan-500/10 to-transparent group-hover:from-cyan-400 group-hover:via-cyan-400/30 transition-colors duration-300" />
+
+                            {/* 장식용: 상단 코너 점 */}
+                            <div className="absolute left-[-2px] top-0 w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)] group-hover:scale-125 transition-transform duration-300" />
+
+                            <div className="flex flex-col gap-1">
+                              {/* 헤더: 아이콘 + 라벨 */}
+                              <div className="flex items-center gap-2">
+                                <CornerDownRight
+                                  size={14}
+                                  className="text-cyan-600 group-hover:text-cyan-400 transition-colors duration-300"
+                                />
+                                <span className="text-[9px] font-black uppercase tracking-widest text-cyan-700 group-hover:text-cyan-400 transition-colors duration-300">
+                                  Analysis_Log
+                                </span>
+                              </div>
+
+                              {/* 본문 텍스트 */}
+                              <p className="text-[11px] font-mono text-slate-500 leading-tight group-hover:text-cyan-100/90 transition-colors duration-300">
+                                <span className="text-cyan-600/50 mr-1 group-hover:text-cyan-400 transition-colors">
+                                  &gt;&gt;
+                                </span>
+                                {getTranslatedReason(product.why)}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
               </div>

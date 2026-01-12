@@ -62,7 +62,7 @@ app = FastAPI(title="Next-Gen E-Commerce API (Hybrid Recommender)")
 
 # 2. CORS 설정 (환경변수 또는 기본값에 의해 관리되도록 개선)
 
-# 환경변수 FRONT_ORIGINS 예시: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,https://your-netlify-site.netlify.app"
+
 
 raw_origins = os.getenv(
 

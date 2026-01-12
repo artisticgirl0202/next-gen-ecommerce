@@ -160,6 +160,7 @@ export default function ProductList({
                 >
                   {/* --- Image --- */}
                   <div
+                    data-cursor-interactive="true"
                     className={`
                     relative overflow-hidden shrink-0 border border-white/5 rounded-xl
                     ${
@@ -181,8 +182,15 @@ export default function ProductList({
                         (e.target as HTMLImageElement).src =
                           'https://placehold.co/400x300/1e293b/475569?text=No+Image';
                       }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedProduct(product);
+                      }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-40 pointer-events-none" />
+                    <div
+                      data-cursor-interactive="true"
+                      className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-40 pointer-events-none"
+                    />
                   </div>
 
                   {/* --- Content --- */}

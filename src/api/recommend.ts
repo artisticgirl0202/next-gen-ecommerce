@@ -179,10 +179,34 @@ export async function fetchHybridRecommendations(
   };
 
   try {
-    const data: any = await postJSON(url, payload, { signal });
+    // 1. 일단 raw 데이터를 받음음
+    const rawData: any = await postJSON(url, payload, { signal });
 
-    if (!Array.isArray(data)) {
-      throw new Error('Hybrid API response is not an array');
+    // 2. 콘솔에 찍어서 실제 데이터 구조를 확인 (F12에서 확인 가능)
+    console.log('🔥 [Hybrid Debug] Raw Response:', rawData);
+
+    let data: any[] = [];
+
+    // 3. 데이터가 배열인지, 아니면 객체 안에 숨어있는지 확인하여 꺼냄
+    if (Array.isArray(rawData)) {
+      data = rawData;
+    } else if (
+      rawData.recommendations &&
+      Array.isArray(rawData.recommendations)
+    ) {
+      data = rawData.recommendations;
+    } else if (rawData.items && Array.isArray(rawData.items)) {
+      data = rawData.items;
+    } else if (rawData.data && Array.isArray(rawData.data)) {
+      data = rawData.data;
+    } else if (rawData.detail) {
+      // 백엔드가 에러 메시지를 보낸 경우
+      throw new Error(`Backend Error: ${rawData.detail}`);
+    } else {
+      // 진짜로 형식을 알 수 없는 경우
+      throw new Error(
+        'Hybrid API response is not an array (Check console for rawData)',
+      );
     }
 
     const normalized: Recommendation[] = data.map((item: any) => ({

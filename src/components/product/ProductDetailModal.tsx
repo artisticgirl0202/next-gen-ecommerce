@@ -1,3 +1,4 @@
+//ProductDetailModal.tsx
 import { fetchHybridRecommendations } from '@/api/recommend';
 import { useAuth } from '@/store/authStore';
 import { useCart } from '@/store/cartStore';
@@ -444,20 +445,20 @@ export default function ProductDetailModal({
             ) : (
               <div
                 ref={recsScrollRef}
-                className="flex gap-6 overflow-x-auto no-scrollbar py-6 px-1 scroll-smooth"
+                className="flex gap-6 overflow-x-auto no-scrollbar py-6 px-1 p-4 sm:p-6 scroll-smooth"
               >
                 {recommendations?.map((r) => (
                   <div
                     key={r.id}
                     /* 1. 카드 컨테이너: flex-col을 사용하여 내용을 위에서 아래로 정렬하고 버튼을 바닥에 붙임 */
                     className="
-          w-56 shrink-0 relative p-4 flex flex-col
-          bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-md
-          rounded-3xl border border-white/10
-          hover:border-cyan-500/40 hover:bg-slate-800/60
-          hover:shadow-[0_0_30px_-10px_rgba(6,182,212,0.3)]
-          transition-all duration-500 ease-out group
-        "
+                      w-56 shrink-0 relative p-4 flex flex-col
+                      bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-md
+                      rounded-3xl border border-white/10
+                      hover:border-cyan-500/40 hover:bg-slate-800/60
+                      hover:shadow-[0_0_30px_-10px_rgba(6,182,212,0.3)]
+                      transition-all duration-500 ease-out group
+                    "
                   >
                     {/* --- 상단 컨텐츠 영역 (flex-1로 남은 공간 차지) --- */}
                     <div className="flex-1 mb-3">
@@ -470,7 +471,14 @@ export default function ProductDetailModal({
                       </div>
 
                       {/* 이미지 영역 */}
-                      <div className="aspect-square rounded-2xl overflow-hidden bg-slate-950/50 border border-white/5 relative mb-4 group-hover:border-cyan-500/20 transition-colors duration-500">
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleProductChange(r);
+                        }}
+                        data-cursor-interactive="true"
+                        className="aspect-square rounded-2xl overflow-hidden bg-slate-950/50 border border-white/5 relative mb-4 group-hover:border-cyan-500/20 transition-colors duration-500"
+                      >
                         <img
                           src={r.image}
                           alt={r.name}
@@ -507,24 +515,25 @@ export default function ProductDetailModal({
                         e.stopPropagation();
                         handleProductChange(r);
                       }}
+                      data-cursor-interactive="true"
                       className="
-            relative group/btn overflow-hidden rounded-xl
-            
-            /* 1. 배경 & 테두리 (Future Tech Style - 요청 사항 반영) */
-            bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
-            border border-cyan-500/20
-            
-            /* 2. 호버 효과 (Glow & Lighten) */
-            hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
-            hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]
-            focus:outline-none transition-all duration-300
-            
-            /* 3. 기본 레이아웃 */
-            flex items-center justify-center cursor-pointer gap-2
-            
-            /* 4. 크기 (w-full로 하단 꽉 채움) */
-            w-full py-2.5 sm:py-3 mt-auto
-          "
+                        relative group/btn overflow-hidden rounded-xl
+                        
+                        /* 1. 배경 & 테두리 (Future Tech Style - 요청 사항 반영) */
+                        bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
+                        border border-cyan-500/20
+                        
+                        /* 2. 호버 효과 (Glow & Lighten) */
+                        hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
+                        hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]
+                        focus:outline-none transition-all duration-300
+                        
+                        /* 3. 기본 레이아웃 */
+                        flex items-center justify-center cursor-pointer gap-2
+                        
+                        /* 4. 크기 (w-full로 하단 꽉 채움) */
+                        w-full py-2.5 sm:py-3 mt-auto
+                      "
                     >
                       {/* 버튼 텍스트 */}
                       <span className="relative z-10 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-cyan-400 group-hover/btn:text-white transition-colors duration-300">

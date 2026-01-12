@@ -10,7 +10,6 @@ import type { OrderShape } from '@/store/orderStore';
 import useOrderStore from '@/store/orderStore';
 import { useUserStore } from '@/store/userStore';
 import type { Recommendation } from '@/types/recommendation';
-
 import { motion } from 'framer-motion';
 import {
   Activity,
@@ -20,6 +19,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  CornerDownRight,
   Edit,
   History,
   MapPin,
@@ -33,7 +33,27 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+const getTranslatedReason = (text: string) => {
+  if (!text) return '';
 
+  // 이미 영어인 경우 그대로 반환 (ASCII 체크)
+  if (/^[\x00-\x7F]*$/.test(text)) return text;
+
+  // 1순위: '콘텐츠'와 '유사'가 둘 다 있는 경우
+  if (text.includes('콘텐츠') && text.includes('유사'))
+    return 'Content Similarity';
+
+  // 2순위: 단일 키워드 매핑
+  if (text.includes('콘텐츠')) return 'Content pattern match';
+  if (text.includes('유사')) return 'Based on similarity';
+  if (text.includes('대체')) return 'Alternative recommendation';
+  if (text.includes('기본')) return 'Basic recommendation';
+  if (text.includes('인기')) return 'Popular choice';
+  if (text.includes('카테고리')) return 'Category match';
+
+  // 매핑되지 않은 나머지
+  return 'AI Suggested';
+};
 interface MyPageProps {
   currentUser: {
     id?: string | number;
@@ -604,18 +624,18 @@ export default function MyPage({ currentUser }: MyPageProps) {
                   <button
                     onClick={onDetailsClick(order)}
                     className="
-    relative group/btn overflow-hidden rounded-lg sm:rounded-xl
-    /* 레이아웃 & 크기 (기존 반응형 유지 + 요청된 스타일 통합) */
-    w-full md:w-auto cursor-pointer
-    
-    /* 배경 & 테두리 스타일 (New Design) */
-    bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
-    border border-cyan-500/20
-    
-    /* 호버 효과 (New Design) */
-    hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
-    focus:outline-none transition-all duration-300
-  "
+                      relative group/btn overflow-hidden rounded-lg sm:rounded-xl
+                      /* 레이아웃 & 크기 (기존 반응형 유지 + 요청된 스타일 통합) */
+                      w-full md:w-auto cursor-pointer
+                      
+                      /* 배경 & 테두리 스타일 (New Design) */
+                      bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
+                      border border-cyan-500/20
+                      
+                      /* 호버 효과 (New Design) */
+                      hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
+                      focus:outline-none transition-all duration-300
+                    "
                   >
                     {/* 내부 콘텐츠 래퍼 (패딩 및 정렬) */}
                     <div className="relative z-10 flex items-center justify-center gap-2 px-6 sm:px-8 py-2 sm:py-3">
@@ -685,34 +705,55 @@ export default function MyPage({ currentUser }: MyPageProps) {
 
           <div
             ref={sliderRef}
-            className="flex gap-4 sm:gap-6 overflow-hidden pb-6 snap-x scroll-smooth"
+            className="flex gap-4 sm:gap-6 overflow-x-auto overflow-y-hidden p-4 sm:p-6 snap-x scroll-smooth no-scrollbar"
           >
             {recsLoading
               ? [1, 2, 3, 4, 5, 6].map((i) => (
                   <div
                     key={i}
-                    className="min-w-[280px] sm:min-w-[320px] aspect-[3/4] bg-white/5 rounded-[1.5rem] animate-pulse border border-white/5 snap-center"
+                    // [변경] 로딩 스켈레톤 크기 축소 (280/320 -> 220/260)
+                    className="min-w-[220px] sm:min-w-[260px] aspect-[3/4] bg-white/5 rounded-[1.25rem] animate-pulse border border-white/5 snap-center"
                   />
                 ))
               : recs.map((product) => (
                   <div
                     key={product.id}
-                    className="min-w-[280px] sm:min-w-[320px] snap-center h-full flex flex-col gap-2"
+                    // [변경] 실제 카드 컨테이너 크기 축소 (280/320 -> 220/260)
+                    className="group min-w-[220px] sm:min-w-[260px] snap-center h-full flex flex-col gap-3"
                   >
                     <ProductCard
                       product={product}
                       onOpen={() => setSelectedProduct(product)}
                     />
 
-                    {/* ✅ 추천 이유 복원 */}
+                    {/*  개선된 AI 추천 이유 디자인 */}
                     {product.why && (
-                      <div className="md:hidden px-3 py-2 rounded-xl bg-slate-900/80 border border-white/5">
-                        <p className="text-[10px] font-mono text-cyan-200 leading-tight">
-                          <span className="text-cyan-400 font-bold mr-1">
-                            AI_REASON:
-                          </span>
-                          {product.why}
-                        </p>
+                      <div className="relative pl-4 pr-2 py-1 ml-2">
+                        <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-cyan-500/50 via-cyan-500/10 to-transparent group-hover:from-cyan-400 group-hover:via-cyan-400/30 transition-colors duration-300" />
+
+                        {/* 장식용: 상단 코너 점 */}
+                        <div className="absolute left-[-2px] top-0 w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)] group-hover:scale-125 transition-transform duration-300" />
+
+                        <div className="flex flex-col gap-1">
+                          {/* 헤더: 아이콘 + 라벨 */}
+                          <div className="flex items-center gap-2">
+                            <CornerDownRight
+                              size={14}
+                              className="text-cyan-600 group-hover:text-cyan-400 transition-colors duration-300"
+                            />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-cyan-700 group-hover:text-cyan-400 transition-colors duration-300">
+                              Analysis_Log
+                            </span>
+                          </div>
+
+                          {/* 본문 텍스트 */}
+                          <p className="text-[11px] font-mono text-slate-500 leading-tight group-hover:text-cyan-100/90 transition-colors duration-300">
+                            <span className="text-cyan-600/50 mr-1 group-hover:text-cyan-400 transition-colors">
+                              &gt;&gt;
+                            </span>
+                            {getTranslatedReason(product.why)}
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>

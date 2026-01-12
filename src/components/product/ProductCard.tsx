@@ -18,28 +18,172 @@ type Props = {
 };
 
 function resolveCategory(product: Product): string {
+  // 1. 데이터에 명시된 카테고리가 공식 리스트에 있으면 최우선 사용
   const firstCat = product.categories?.[0];
   if (firstCat && CATEGORIES.includes(firstCat)) return firstCat;
+
   const singleCat = (product as any).category;
   if (singleCat && CATEGORIES.includes(singleCat)) return singleCat;
-  const safeName = product.name || (product as any).title || '';
-  const lowerName = safeName.toLowerCase();
-  if (lowerName.includes('laptop') || lowerName.includes('pc'))
+
+  // 2. 카테고리 정보가 불확실할 때, 상품명(name/title) 기반 추론
+  const safeName = (product.name || (product as any).title || '').toLowerCase();
+
+  // --- [Computing Devices] ---
+  if (
+    safeName.includes('laptop') ||
+    safeName.includes('pc') ||
+    safeName.includes('computer') ||
+    safeName.includes('tablet') ||
+    safeName.includes('macbook') ||
+    safeName.includes('desktop')
+  ) {
     return 'Computing Devices';
-  if (lowerName.includes('phone') || lowerName.includes('watch'))
+  }
+
+  // --- [Mobile & Wearables] ---
+  if (
+    safeName.includes('phone') ||
+    safeName.includes('watch') ||
+    safeName.includes('mobile') ||
+    safeName.includes('wearable') ||
+    safeName.includes('galaxy') ||
+    safeName.includes('iphone')
+  ) {
     return 'Mobile & Wearables';
-  if (lowerName.includes('audio') || lowerName.includes('sound'))
+  }
+
+  // --- [Audio Devices] ---
+  if (
+    safeName.includes('audio') ||
+    safeName.includes('sound') ||
+    safeName.includes('speaker') ||
+    safeName.includes('headphone') ||
+    safeName.includes('earbud') ||
+    safeName.includes('headset')
+  ) {
     return 'Audio Devices';
-  if (lowerName.includes('camera') || lowerName.includes('lens'))
-    return 'Cameras & Imaging';
-  if (lowerName.includes('monitor') || lowerName.includes('display'))
+  }
+
+  // --- [Video & Display] ---
+  if (
+    safeName.includes('monitor') ||
+    safeName.includes('display') ||
+    safeName.includes('tv') ||
+    safeName.includes('screen') ||
+    safeName.includes('projector')
+  ) {
     return 'Video & Display';
-  if (lowerName.includes('game')) return 'Gaming Gear';
-  if (lowerName.includes('cable') || lowerName.includes('charger'))
+  }
+
+  // --- [Cameras & Imaging] ---
+  if (
+    safeName.includes('camera') ||
+    safeName.includes('lens') ||
+    safeName.includes('dslr') ||
+    safeName.includes('camcorder') ||
+    safeName.includes('drone')
+  ) {
+    return 'Cameras & Imaging';
+  }
+
+  // --- [Peripherals] (키보드, 마우스 등) ---
+  if (
+    safeName.includes('mouse') ||
+    safeName.includes('keyboard') ||
+    safeName.includes('printer') ||
+    safeName.includes('trackpad') ||
+    safeName.includes('scanner')
+  ) {
+    return 'Peripherals';
+  }
+
+  // --- [Gaming Gear] ---
+  if (
+    safeName.includes('game') ||
+    safeName.includes('gaming') ||
+    safeName.includes('console') ||
+    safeName.includes('controller') ||
+    safeName.includes('xbox') ||
+    safeName.includes('playstation')
+  ) {
+    return 'Gaming Gear';
+  }
+
+  // --- [Smart Home & IoT] ---
+  if (
+    safeName.includes('smart') ||
+    safeName.includes('iot') ||
+    safeName.includes('bulb') ||
+    safeName.includes('light') ||
+    safeName.includes('thermostat') ||
+    safeName.includes('sensor')
+  ) {
+    return 'Smart Home & IoT';
+  }
+
+  // --- [Network & Comm] ---
+  if (
+    safeName.includes('network') ||
+    safeName.includes('wifi') ||
+    safeName.includes('router') ||
+    safeName.includes('modem') ||
+    safeName.includes('switch')
+  ) {
+    return 'Network & Comm';
+  }
+
+  // --- [Power & Charging] ---
+  if (
+    safeName.includes('cable') ||
+    safeName.includes('charger') ||
+    safeName.includes('battery') ||
+    safeName.includes('power') ||
+    safeName.includes('adapter')
+  ) {
     return 'Power & Charging';
-  return firstCat || singleCat || 'AI & Next-Gen';
+  }
+
+  // --- [Components] (부품) ---
+  if (
+    safeName.includes('cpu') ||
+    safeName.includes('gpu') ||
+    safeName.includes('ram') ||
+    safeName.includes('memory') ||
+    safeName.includes('ssd') ||
+    safeName.includes('hdd') ||
+    safeName.includes('graphic') ||
+    safeName.includes('motherboard') ||
+    safeName.includes('cooler') ||
+    safeName.includes('case')
+  ) {
+    return 'Components';
+  }
+
+  // 3. 매칭되는 것이 없으면 기타/AI로 분류
+  return 'AI & Next-Gen';
 }
 
+const getTranslatedReason = (text: string) => {
+  if (!text) return '';
+
+  // 이미 영어인 경우 그대로 반환 (ASCII 체크)
+  if (/^[\x00-\x7F]*$/.test(text)) return text;
+
+  // 1순위: '콘텐츠'와 '유사'가 둘 다 있는 경우
+  if (text.includes('콘텐츠') && text.includes('유사'))
+    return 'Content Similarity';
+
+  // 2순위: 단일 키워드 매핑
+  if (text.includes('콘텐츠')) return 'Content pattern match';
+  if (text.includes('유사')) return 'Based on similarity';
+  if (text.includes('대체')) return 'Alternative recommendation';
+  if (text.includes('기본')) return 'Basic recommendation';
+  if (text.includes('인기')) return 'Popular choice';
+  if (text.includes('카테고리')) return 'Category match';
+
+  // 매핑되지 않은 나머지
+  return 'AI Suggested';
+};
 export default function ProductCard({
   product,
   onOpen,
@@ -68,7 +212,14 @@ export default function ProductCard({
       `}
     >
       {/* --- Image Section (Sleek HUD View) --- */}
-      <div className="relative w-full aspect-square overflow-hidden bg-slate-900/50">
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpen?.(product);
+        }}
+        data-cursor-interactive="true"
+        className="relative w-full aspect-square overflow-hidden bg-slate-900/50"
+      >
         {/* Holographic Scan Effect */}
         <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/0 via-cyan-400/5 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-10 pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-10" />
@@ -111,7 +262,7 @@ export default function ProductCard({
             <div className="flex items-start gap-2 p-2 rounded-xl bg-cyan-950/30 border border-cyan-500/20 backdrop-blur-sm">
               <Cpu size={12} className="text-cyan-400 shrink-0 mt-0.5" />
               <p className="text-[10px] text-cyan-100/90 font-mono leading-relaxed line-clamp-2">
-                {product.why}
+                {getTranslatedReason(product.why)}
               </p>
             </div>
           </div>

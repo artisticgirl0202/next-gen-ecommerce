@@ -1,5 +1,5 @@
-import { motion, useMotionValue, useSpring } from "framer-motion";
-import { useEffect, useState } from "react";
+import { motion, useMotionValue, useSpring } from 'framer-motion';
+import { useEffect, useState } from 'react';
 
 export const GlobalCursor = () => {
   const [isHovered, setIsHovered] = useState(false);
@@ -40,11 +40,18 @@ export const GlobalCursor = () => {
       const target = e.target as HTMLElement;
       if (!target) return;
 
-      // ✅ 2. 개선된 호버 감지 로직 (getComputedStyle 제거)
+      //  2. 개선된 호버 감지 로직 (getComputedStyle 제거)
       // 스타일(cursor: none)을 이미 적용했으므로, 태그와 속성으로만 판단해야 정확합니다.
 
       // 검사할 태그 목록
-      const interactiveTags = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA', 'LABEL'];
+      const interactiveTags = [
+        'BUTTON',
+        'A',
+        'INPUT',
+        'SELECT',
+        'TEXTAREA',
+        'LABEL',
+      ];
 
       const isClickable =
         // 1) 직접 태그 매칭
@@ -55,13 +62,15 @@ export const GlobalCursor = () => {
         // 3) Tailwind 'cursor-pointer' 클래스 사용 요소
         target.closest('.cursor-pointer') !== null ||
         // 4) 접근성 속성 role="button" 확인
-        target.closest('[role="button"]') !== null;
+        target.closest('[role="button"]') !== null ||
+        //  [추가됨] 명시적으로 data-cursor-interactive 속성이 있는 요소
+        target.closest('[data-cursor-interactive="true"]') !== null;
 
       setIsHovered(isClickable);
     };
 
-    window.addEventListener("mousemove", handleMove);
-    return () => window.removeEventListener("mousemove", handleMove);
+    window.addEventListener('mousemove', handleMove);
+    return () => window.removeEventListener('mousemove', handleMove);
   }, [dotX, dotY, ringX, ringY]);
 
   return (
@@ -72,8 +81,8 @@ export const GlobalCursor = () => {
         style={{
           x: dotX,
           y: dotY,
-          translateX: "-50%", // 정확한 중앙 정렬
-          translateY: "-50%"  // 정확한 중앙 정렬
+          translateX: '-50%', // 정확한 중앙 정렬
+          translateY: '-50%', // 정확한 중앙 정렬
         }}
       />
 
@@ -83,24 +92,28 @@ export const GlobalCursor = () => {
         style={{
           x: ringX,
           y: ringY,
-          translateX: "-50%",
-          translateY: "-50%"
+          translateX: '-50%',
+          translateY: '-50%',
         }}
         animate={{
           // 호버 여부에 따른 크기 변화
           width: isHovered ? 60 : 20,
           height: isHovered ? 60 : 20,
           // 호버 시 배경색 및 글로우 효과 강화
-          backgroundColor: isHovered ? "rgba(34, 211, 238, 0.1)" : "transparent",
+          backgroundColor: isHovered
+            ? 'rgba(34, 211, 238, 0.1)'
+            : 'transparent',
           boxShadow: isHovered
-            ? "0 0 30px rgba(34, 211, 238, 0.6), inset 0 0 10px rgba(34, 211, 238, 0.3)" // 강한 네온
-            : "none", // 평소에는 그림자 없음 (깔끔하게)
-          borderColor: isHovered ? "rgba(34, 211, 238, 1)" : "rgba(34, 211, 238, 0.5)"
+            ? '0 0 30px rgba(34, 211, 238, 0.6), inset 0 0 10px rgba(34, 211, 238, 0.3)' // 강한 네온
+            : 'none', // 평소에는 그림자 없음 (깔끔하게)
+          borderColor: isHovered
+            ? 'rgba(34, 211, 238, 1)'
+            : 'rgba(34, 211, 238, 0.5)',
         }}
         transition={{
-          type: "tween",
-          ease: "backOut",
-          duration: 0.2
+          type: 'tween',
+          ease: 'backOut',
+          duration: 0.2,
         }}
       />
     </div>
