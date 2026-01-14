@@ -16,7 +16,31 @@ type Props = {
   onOpen?: (p: Product) => void;
   compact?: boolean;
 };
+/**
+ * 추천 이유 번역 헬퍼 함수
+ */
+const translateWhy = (text: string | undefined): string => {
+  if (!text) return 'AI Suggested Neural Match';
 
+  // 이미 영어인 경우 그대로 반환 (정규식: 알파벳, 숫자, 기본 문장부호)
+  if (/^[A-Za-z0-9\s.,!'-]+$/.test(text)) return text;
+
+  // 한국어 키워드 매핑
+  if (text.includes('콘텐츠') || text.includes('패턴'))
+    return 'Content pattern match';
+  if (text.includes('유사') || text.includes('비슷한'))
+    return 'Based on product similarity';
+  if (text.includes('대체')) return 'Strategic alternative';
+  if (text.includes('인기') || text.includes('많이 찾'))
+    return 'Trending in this category';
+  if (text.includes('함께') || text.includes('자주'))
+    return 'Frequently bought together';
+  if (text.includes('선호') || text.includes('취향'))
+    return 'Refinement of your preference';
+  if (text.includes('카테고리')) return 'Category-specific suggestion';
+
+  return 'Optimal match based on profile.'; // 기본값
+};
 function resolveCategory(product: Product): string {
   // 1. 데이터에 명시된 카테고리가 공식 리스트에 있으면 최우선 사용
   const firstCat = product.categories?.[0];
@@ -163,27 +187,8 @@ function resolveCategory(product: Product): string {
   return 'AI & Next-Gen';
 }
 
-const getTranslatedReason = (text: string) => {
-  if (!text) return '';
+// ❌ [삭제됨] getTranslatedReason 함수 제거함 (백엔드 데이터 직접 사용)
 
-  // 이미 영어인 경우 그대로 반환 (ASCII 체크)
-  if (/^[\x00-\x7F]*$/.test(text)) return text;
-
-  // 1순위: '콘텐츠'와 '유사'가 둘 다 있는 경우
-  if (text.includes('콘텐츠') && text.includes('유사'))
-    return 'Content Similarity';
-
-  // 2순위: 단일 키워드 매핑
-  if (text.includes('콘텐츠')) return 'Content pattern match';
-  if (text.includes('유사')) return 'Based on similarity';
-  if (text.includes('대체')) return 'Alternative recommendation';
-  if (text.includes('기본')) return 'Basic recommendation';
-  if (text.includes('인기')) return 'Popular choice';
-  if (text.includes('카테고리')) return 'Category match';
-
-  // 매핑되지 않은 나머지
-  return 'AI Suggested';
-};
 export default function ProductCard({
   product,
   onOpen,
@@ -261,8 +266,9 @@ export default function ProductCard({
           <div className="hidden md:block absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
             <div className="flex items-start gap-2 p-2 rounded-xl bg-cyan-950/30 border border-cyan-500/20 backdrop-blur-sm">
               <Cpu size={12} className="text-cyan-400 shrink-0 mt-0.5" />
-              <p className="text-[10px] text-cyan-100/90 font-mono leading-relaxed line-clamp-2">
-                {getTranslatedReason(product.why)}
+              {/* ✅ [수정됨] 직접 바인딩 + whitespace-pre-wrap 추가 */}
+              <p className="text-[10px] text-cyan-100/90 font-mono leading-relaxed line-clamp-2 whitespace-pre-wrap">
+                {translateWhy(product.why)}
               </p>
             </div>
           </div>

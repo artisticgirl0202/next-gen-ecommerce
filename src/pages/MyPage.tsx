@@ -1,16 +1,14 @@
-// src/pages/MyPage.tsx
 'use client';
 
+import { sendAIFeedbackAPI } from '@/api/integration';
 import { fetchHybridRecommendations } from '@/api/recommend';
 import ProductCard from '@/components/product/ProductCard';
 import ProductDetailModal from '@/components/product/ProductDetailModal';
-import demoProductsRaw from '@/data/demo_products_500.json';
-import { getProductById } from '@/data/products_indexed';
 import type { OrderShape } from '@/store/orderStore';
 import useOrderStore from '@/store/orderStore';
 import { useUserStore } from '@/store/userStore';
-import type { Recommendation } from '@/types/recommendation';
-import { motion } from 'framer-motion';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion, Variants } from 'framer-motion';
 import {
   Activity,
   Archive,
@@ -31,29 +29,9 @@ import {
   UserCircle2,
   Wallet,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-const getTranslatedReason = (text: string) => {
-  if (!text) return '';
 
-  // 이미 영어인 경우 그대로 반환 (ASCII 체크)
-  if (/^[\x00-\x7F]*$/.test(text)) return text;
-
-  // 1순위: '콘텐츠'와 '유사'가 둘 다 있는 경우
-  if (text.includes('콘텐츠') && text.includes('유사'))
-    return 'Content Similarity';
-
-  // 2순위: 단일 키워드 매핑
-  if (text.includes('콘텐츠')) return 'Content pattern match';
-  if (text.includes('유사')) return 'Based on similarity';
-  if (text.includes('대체')) return 'Alternative recommendation';
-  if (text.includes('기본')) return 'Basic recommendation';
-  if (text.includes('인기')) return 'Popular choice';
-  if (text.includes('카테고리')) return 'Category match';
-
-  // 매핑되지 않은 나머지
-  return 'AI Suggested';
-};
 interface MyPageProps {
   currentUser: {
     id?: string | number;
@@ -66,54 +44,64 @@ interface MyPageProps {
 
 export default function MyPage({ currentUser }: MyPageProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { login, getCurrentUser } = useUserStore();
   const setOrder = useOrderStore((s) => s.setOrder);
 
-  const [recs, setRecs] = useState<Recommendation[]>([]);
-  const [recsLoading, setRecsLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const sliderRef = useRef<HTMLDivElement | null>(null);
 
-  // circuit-board path — use import.meta.url fallback to reduce 404s in some bundlers
-  const circuitBoardUrl = (() => {
-    try {
-      return new URL('/circuit-board.svg', import.meta.url).href;
-    } catch (e) {
-      return '/circuit-board.svg';
-    }
-  })();
+  // Background pattern path
+  const circuitBoardUrl = '/circuit-board.svg';
 
-  // --- [데이터 초기화 로직] ---
+  // --- Profile Sync ---
   useEffect(() => {
     if (currentUser?.email) {
       try {
-        // try common signature
-        // @ts-ignore
         login(currentUser.email, currentUser.name);
       } catch (e) {
-        try {
-          // try object signature
-          // @ts-ignore
-          login({
-            id: currentUser.id,
-            email: currentUser.email,
-            name: currentUser.name,
-          });
-        } catch {
-          // non-fatal
-        }
+        // Fallback for different user store versions
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.email, login]);
+  }, [currentUser?.email, login, currentUser.name]);
 
-  // getCurrentUser() returns the UserData defined in the store (which has profile but not `id`)
   const userData = getCurrentUser();
   const orders = userData?.orders ?? [];
+
+  // 1. Seed Product for AI Recommendation
+  const seedProductId = useMemo(() => {
+    if (!orders || orders.length === 0) return 0;
+    const seedItem = orders[0]?.items?.[0];
+    // [수정] 타입 단언을 사용하여 id 접근 오류 방지 및 중복 코드 정리
+    return Number(seedItem?.productId ?? (seedItem as any)?.id ?? 0);
+  }, [orders]);
+
+  // 2. Fetch AI Recommendations
+  const { data: recData, isLoading: recsLoading } = useQuery({
+    queryKey: ['hybrid-recs', seedProductId, currentUser?.id],
+    queryFn: () => fetchHybridRecommendations(seedProductId, 10),
+    enabled: !!seedProductId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // 3. AI Feedback Mutation
+  const actionMutation = useMutation({
+    mutationFn: (variables: { productId: number; action: string }) =>
+      sendAIFeedbackAPI({
+        userId: currentUser?.id ?? 0,
+        productId: variables.productId,
+        action: variables.action,
+        orderId: -1,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hybrid-recs'] });
+    },
+  });
+
+  const recs = recData?.recommendations ?? [];
   const hasAddress =
     !!userData?.profile?.addresses && userData.profile.addresses.length > 0;
 
-  // --- [통계 계산 로직] ---
   const orderStats = useMemo(() => {
     return orders.reduce(
       (acc, order: any) => {
@@ -127,133 +115,26 @@ export default function MyPage({ currentUser }: MyPageProps) {
     );
   }, [orders]);
 
-  // --- API base ---
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-
-  // --- syncOrderFeedback API helper ---
-  const syncOrderFeedbackApi = async (payload: {
-    userId: string;
-    orderId: string;
-    action: string;
-  }) => {
-    const url = `${API_BASE_URL}/api/ai/feedback`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      credentials: 'include',
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`sync failed: ${res.status} ${res.statusText} ${text}`);
-    }
-    return res.json().catch(() => null);
-  };
-
-  // --- [AI 추천 & 슬라이더 로직] ---
-  useEffect(() => {
-    const loadRecommendations = async () => {
-      if (!orders || orders.length === 0) {
-        setRecs([]);
-        return;
-      }
-      const seedItem = orders[0]?.items?.[0];
-      if (!seedItem) {
-        setRecs([]);
-        return;
-      }
-
-      setRecsLoading(true);
-      try {
-        // 안전하게 product id 추출 (여러 필드명 호환)
-        const seedProductId = Number(
-          (seedItem as any).productId ??
-            (seedItem as any).product_id ??
-            (seedItem as any).id ??
-            NaN,
-        );
-        if (!Number.isFinite(seedProductId)) {
-          console.warn('Invalid seed product id', seedItem);
-          setRecs([]);
-          return;
-        }
-
-        const response: any = await fetchHybridRecommendations(
-          seedProductId,
-          10,
-        );
-
-        let recsArray: any[] =
-          response?.recommendations ??
-          response?.data ??
-          (Array.isArray(response) ? response : []) ??
-          [];
-
-        // fallback: demo products so UI doesn't stay empty
-        if (!recsArray || recsArray.length === 0) {
-          recsArray = (demoProductsRaw as any[]).slice(0, 6) || [];
-        }
-
-        const normalizedProducts: Recommendation[] = recsArray
-          .map((it: any): Recommendation | null => {
-            if (!it) return null;
-
-            // already a rich object from backend
-            if (it.id && (it.name || it.title)) {
-              return {
-                id: it.id,
-                name: it.name ?? it.title,
-                title: it.title ?? it.name,
-                price: Number(it.price ?? 0),
-                image: it.image ?? '',
-                why: it.why ?? null,
-                confidence:
-                  typeof it.confidence === 'number' ? it.confidence : undefined,
-                // preserve any raw fields
-                raw: it,
-              } as Recommendation;
-            }
-
-            // numeric/string id -> try to enrich from local index but preserve reason
-            if (typeof it === 'string' || typeof it === 'number') {
-              const meta = getProductById(Number(it));
-              if (!meta) return null;
-              return {
-                ...meta,
-                why: 'ID recall',
-                confidence: 0.2,
-              } as Recommendation;
-            }
-
-            // if backend returned product wrapper
-            if (it.product) {
-              return {
-                id: it.product.id ?? it.productId,
-                name: it.product.name ?? it.product.title,
-                price: Number(it.product.price ?? 0),
-                image: it.product.image ?? it.image ?? '',
-                why: it.why ?? it.reason ?? null,
-                confidence: it.confidence,
-                raw: it,
-              } as Recommendation;
-            }
-
-            return null;
-          })
-          .filter((item): item is Recommendation => item !== null);
-
-        setRecs(normalizedProducts);
-      } catch (error) {
-        console.error('Failed to load recommendations', error);
-        setRecs((demoProductsRaw as any[]).slice(0, 6) ?? []);
-      } finally {
-        setRecsLoading(false);
-      }
+  const handleDetailsClick = (order: any) => {
+    if (!order?.id) return;
+    const normalized: OrderShape = {
+      id: order.id,
+      userId: order.userId ?? currentUser?.id,
+      items: (order.items || []).map((item: any) => ({
+        // [수정] 중복된 nullish coalescing 정리
+        productId: item.productId ?? item.id ?? 0,
+        qty: item.qty ?? item.quantity ?? 1,
+        price: item.price ?? 0,
+        title: item.title ?? item.name,
+        image: item.image,
+        category: item.category,
+      })),
+      total: order.total ?? order.totalAmount,
+      status: order.status,
     };
-
-    loadRecommendations();
-  }, [orders]); // keep orders dependency
+    setOrder(normalized);
+    navigate(`/orders/${order.id}`, { state: { order: normalized } });
+  };
 
   const scrollRecs = (dir: 'left' | 'right') => {
     if (!sliderRef.current) return;
@@ -264,65 +145,51 @@ export default function MyPage({ currentUser }: MyPageProps) {
     });
   };
 
-  // --- [상세보기 & 피드백 동기화 로직] ---
-  const onDetailsClick = (order: any) => async (e: MouseEvent) => {
-    e.preventDefault();
-    if (!order?.id) return;
-
-    // order 객체를 OrderShape로 변환
-    const normalized: OrderShape = {
-      id: order.id,
-      userId: order.userId ?? currentUser?.id,
-      items: (order.items || []).map((item: any) => ({
-        productId: item.productId ?? item.product_id ?? item.id,
-        qty: item.qty ?? item.quantity ?? 1,
-        price: item.price ?? 0,
-        title: item.title ?? item.name,
-        image: item.image,
-        category: item.category,
-      })),
-      total: order.total ?? order.totalAmount,
-      status: order.status,
-    };
-
-    setOrder(normalized);
-
-    // 사용자/주문 ID 검증 (use store fallback)
-    const storeUser = getCurrentUser?.();
-    const userIdRaw = currentUser?.id ?? storeUser?.profile?.email;
-
-    if (!userIdRaw) {
-      console.warn('syncOrderFeedback aborted: missing currentUser.id');
-      navigate(`/orders/${normalized.id}`, { state: { order: normalized } });
-      return;
-    }
-
-    try {
-      await syncOrderFeedbackApi({
-        userId: String(userIdRaw),
-        orderId: String(normalized.id),
-        action: 'view_details',
-      });
-      navigate(`/orders/${normalized.id}`, { state: { order: normalized } });
-    } catch (err) {
-      console.error('syncOrderFeedback failed:', err);
-      navigate(`/orders/${normalized.id}`, { state: { order: normalized } });
-    }
-  };
-
-  // --- [애니메이션 설정] ---
+  // --- Animation Variants ---
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
   };
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
+
+  const itemVariants: Variants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        ease: [0.25, 0.1, 0.25, 1.0],
+      },
+    },
+  };
+
+  // --- Helpers ---
+  const getTranslatedReason = (text: string) => {
+    if (!text) return '';
+    if (/^[\x00-\x7F]*$/.test(text)) return text;
+    if (text.includes('콘텐츠') || text.includes('패턴'))
+      return 'Content pattern match';
+    if (text.includes('유사') || text.includes('비슷한'))
+      return 'Based on product similarity';
+    if (text.includes('대체')) return 'Strategic alternative';
+    if (text.includes('인기') || text.includes('많이 찾'))
+      return 'Trending in this category';
+    if (text.includes('함께') || text.includes('자주'))
+      return 'Frequently bought together';
+    if (text.includes('선호') || text.includes('취향'))
+      return 'Refinement of your preference';
+    if (text.includes('카테고리')) return 'Category-specific suggestion';
+
+    return 'Optimal match based on profile.';
   };
 
   return (
     <div className="min-h-screen text-slate-200 selection:bg-cyan-500/30 relative font-sans bg-slate-950 overflow-hidden">
-      {/* 회로 패턴 배경: 배포시 public/circuit-board.svg 존재 확인 */}
       <div
         className="fixed inset-0 bg-center opacity-5 mix-blend-screen pointer-events-none z-0"
         style={{ backgroundImage: `url(${circuitBoardUrl})` }}
@@ -334,7 +201,6 @@ export default function MyPage({ currentUser }: MyPageProps) {
         animate="visible"
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10 space-y-12"
       >
-        {/* 뒤로가기 버튼 */}
         <button
           onClick={() => navigate(-1)}
           className="group flex items-center gap-3 text-slate-500 hover:text-cyan-400 transition-colors w-fit"
@@ -344,14 +210,11 @@ export default function MyPage({ currentUser }: MyPageProps) {
           </div>
         </button>
 
-        {/* 프로필 & 주소 섹션 */}
         <motion.section
           variants={itemVariants}
           className="grid grid-cols-1 lg:grid-cols-3 gap-8"
         >
-          {/* [CARD 1] CITIZEN PROFILE AREA - OrderDetailPage 스타일 */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Header Section - OrderDetailPage 스타일 적용 */}
             <motion.header
               variants={itemVariants}
               initial="hidden"
@@ -369,7 +232,6 @@ export default function MyPage({ currentUser }: MyPageProps) {
                 </div>
                 <h1 className="text-3xl sm:text-5xl font-black text-white italic uppercase tracking-tighter">
                   {currentUser.name}
-                  {/* currentUser.id가 있을 때만 #ID를 표시 */}
                   {currentUser.id && (
                     <span className="text-slate-600"> #{currentUser.id}</span>
                   )}
@@ -377,7 +239,6 @@ export default function MyPage({ currentUser }: MyPageProps) {
               </div>
 
               <div className="text-right md:text-left">
-                {/* Avatar with Glow Area */}
                 <div className="relative shrink-0 group inline-block">
                   <div className="absolute inset-0 bg-cyan-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden border-2 border-cyan-500/30 bg-slate-950 shadow-2xl">
@@ -397,7 +258,6 @@ export default function MyPage({ currentUser }: MyPageProps) {
               </div>
             </motion.header>
 
-            {/* Info List Section */}
             <motion.div variants={itemVariants} className="space-y-6">
               <div className="flex items-center gap-2 border-b border-white/10 pb-4">
                 <UserCircle2 className="text-cyan-500" size={20} />
@@ -422,67 +282,54 @@ export default function MyPage({ currentUser }: MyPageProps) {
                 </div>
               </div>
 
-              {/* Action Buttons inside stylized box */}
               <div className="pt-4 flex flex-wrap gap-3">
-                {/* 1. Update Profile Button (Primary Hologram) */}
                 <button
                   className="
-    relative group overflow-hidden rounded-xl px-5 py-2.5
-    /* 배경: 반투명 Cyan 그라디언트 */
-    bg-gradient-to-r from-cyan-950/40 to-cyan-900/20 
-    border border-cyan-500/30
-    /* 호버: 밝기 증가 및 글로우 효과 */
-    hover:bg-cyan-500/20 hover:border-cyan-400/60 
-    hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.4)]
-    transition-all duration-300 ease-out cursor-pointer
-  "
+                    relative group overflow-hidden rounded-xl px-5 py-2.5
+                    bg-gradient-to-r from-cyan-950/40 to-cyan-900/20 
+                    border border-cyan-500/30
+                    hover:bg-cyan-500/20 hover:border-cyan-400/60 
+                    hover:shadow-[0_0_20px_-5px_rgba(6,182,212,0.4)]
+                    transition-all duration-300 ease-out cursor-pointer
+                  "
                 >
                   <span
                     className="
-    relative z-10 flex items-center gap-2 
-    text-[10px] font-black uppercase tracking-widest 
-    text-cyan-400 group-hover:text-white 
-    transition-colors duration-300 pt-0.5
-  "
+                      relative z-10 flex items-center gap-2 
+                      text-[10px] font-black uppercase tracking-widest 
+                      text-cyan-400 group-hover:text-white 
+                      transition-colors duration-300 pt-0.5
+                    "
                   >
                     <Edit
                       size={14}
                       className="
-      /* 1. 기계적인 회전: 45도로 확실하게 꺾어줍니다. */
-      group-hover:rotate-45 
-      /* 2. 입체감: 호버 시 아주 살짝 튀어나오는 느낌 */
-      group-hover:scale-110
-      /* 3. 서보 모터 효과: 마지막에 살짝 튕기는 베지어 곡선 */
-      transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-    "
+                        group-hover:rotate-45 
+                        group-hover:scale-110
+                        transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+                      "
                     />
                     Update_Profile
                   </span>
-
-                  {/* 호버 시 하단 레이저 바 */}
                   <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-0 group-hover:opacity-100 blur-[1px] transition-opacity duration-300" />
                 </button>
 
-                {/* 2. Ledger Payment Button (Secondary Secure Module) */}
                 <button
                   className="
-    relative group overflow-hidden rounded-xl px-5 py-2.5
-    /* 배경: 더 어두운 Slate 배경 (보안 느낌) */
-    bg-slate-950/60 
-    border border-white/10
-    /* 호버: Cyan 테두리와 배경 은은하게 켜짐 */
-    hover:border-cyan-500/40 hover:bg-cyan-950/30
-    transition-all duration-300 ease-out cursor-pointer
-  "
+                    relative group overflow-hidden rounded-xl px-5 py-2.5
+                    bg-slate-950/60 
+                    border border-white/10
+                    hover:border-cyan-500/40 hover:bg-cyan-950/30
+                    transition-all duration-300 ease-out cursor-pointer
+                  "
                 >
                   <span
                     className="
-      relative z-10 flex items-center gap-2 
-      text-[10px] font-black uppercase tracking-widest 
-      /* 평소엔 Slate-400 (비활성 느낌) -> 호버 시 Cyan-300 (활성) */
-      text-slate-400 group-hover:text-cyan-300 
-      transition-colors duration-300 pt-0.5
-    "
+                      relative z-10 flex items-center gap-2 
+                      text-[10px] font-black uppercase tracking-widest 
+                      text-slate-400 group-hover:text-cyan-300 
+                      transition-colors duration-300 pt-0.5
+                    "
                   >
                     <Wallet
                       size={14}
@@ -490,21 +337,16 @@ export default function MyPage({ currentUser }: MyPageProps) {
                     />
                     Ledger_Payment
                   </span>
-
-                  {/* 배경 스캔 효과 (데이터 처리 느낌) */}
                   <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-cyan-500/5 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
                 </button>
               </div>
             </motion.div>
           </div>
 
-          {/* [CARD 2] SHIPPING DATA AREA */}
           <div className="border border-cyan-500/20 rounded-3xl p-6 sm:p-8 relative overflow-hidden bg-slate-900/40 backdrop-blur-xl shadow-[0_0_40px_rgba(6,182,212,0.05)] flex flex-col justify-between">
-            {/* Top Accent Line */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
 
             <div>
-              {/* 1. 용어 변경: Logistic_Locator -> Shipping Destination */}
               <h3 className="text-lg font-black text-white uppercase italic tracking-tight mb-6 flex items-center gap-2">
                 <MapPin className="text-cyan-500" size={18} /> Shipping
                 Destination
@@ -513,20 +355,17 @@ export default function MyPage({ currentUser }: MyPageProps) {
               <div className="space-y-3 mb-6 font-mono text-sm">
                 <div className="flex justify-between text-slate-400 text-[10px] tracking-widest uppercase">
                   <span>Current Node</span>
-                  {/* 2. 용어 변경: Verified -> Active Link */}
                   <span className="text-emerald-400 italic font-bold">
                     Active Link
                   </span>
                 </div>
                 <div className="h-px bg-white/10 my-2" />
 
-                {/* Address Content Box */}
                 <div className="p-4 bg-cyan-950/20 border border-cyan-500/10 rounded-xl">
                   <p className="text-sm text-cyan-100/80 leading-relaxed font-mono">
                     {hasAddress
                       ? userData.profile.addresses[0]
-                      : // 3. 문구 변경: 조금 더 자연스러운 문장으로
-                        'No shipping coordinates registered.'}
+                      : 'No shipping coordinates registered.'}
                   </p>
                 </div>
               </div>
@@ -544,7 +383,6 @@ export default function MyPage({ currentUser }: MyPageProps) {
           </div>
         </motion.section>
 
-        {/* 통계 카드 섹션 */}
         <motion.section
           variants={itemVariants}
           className="grid grid-cols-2 md:grid-cols-4 gap-6"
@@ -575,7 +413,6 @@ export default function MyPage({ currentUser }: MyPageProps) {
           />
         </motion.section>
 
-        {/* 주문 내역 섹션 */}
         <motion.section variants={itemVariants} className="space-y-6">
           <div className="flex items-center gap-3 border-b border-white/5 pb-4">
             <Package className="text-cyan-500" size={24} />
@@ -595,9 +432,10 @@ export default function MyPage({ currentUser }: MyPageProps) {
                 </p>
               </div>
             ) : (
+              // [수정] index 파라미터 제거
               orders.map((order: any) => (
                 <div
-                  key={order.id}
+                  key={`order-${order.id}`}
                   className="group relative bg-white/[0.02] border border-white/5 p-6 rounded-[1.5rem] hover:border-cyan-500/30 hover:bg-white/[0.04] hover:shadow-[0_0_40px_rgba(6,182,212,0.1)] transition-all duration-300 flex flex-col md:flex-row justify-between items-center gap-6 overflow-hidden"
                 >
                   <div className="flex items-center gap-8 w-full md:w-auto z-10">
@@ -622,34 +460,26 @@ export default function MyPage({ currentUser }: MyPageProps) {
                     </div>
                   </div>
                   <button
-                    onClick={onDetailsClick(order)}
+                    onClick={() => handleDetailsClick(order)}
                     className="
                       relative group/btn overflow-hidden rounded-lg sm:rounded-xl
-                      /* 레이아웃 & 크기 (기존 반응형 유지 + 요청된 스타일 통합) */
                       w-full md:w-auto cursor-pointer
-                      
-                      /* 배경 & 테두리 스타일 (New Design) */
                       bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
                       border border-cyan-500/20
-                      
-                      /* 호버 효과 (New Design) */
                       hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
                       focus:outline-none transition-all duration-300
                     "
                   >
-                    {/* 내부 콘텐츠 래퍼 (패딩 및 정렬) */}
                     <div className="relative z-10 flex items-center justify-center gap-2 px-6 sm:px-8 py-2 sm:py-3">
                       <span
                         className="
-                        text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] 
-                        text-slate-200 group-hover/btn:text-cyan-200 transition-colors pt-0.5
+                          text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] 
+                          text-slate-200 group-hover/btn:text-cyan-200 transition-colors pt-0.5
                         "
                       >
                         Details
                       </span>
                     </div>
-
-                    {/* 하단 글로우 바 (선택 사항: 이전 디자인 컨셉 통일감을 위해 추가) */}
                     <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300 blur-[2px]" />
                   </button>
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -659,7 +489,6 @@ export default function MyPage({ currentUser }: MyPageProps) {
           </div>
         </motion.section>
 
-        {/* AI 추천 슬라이더 섹션 */}
         <motion.section
           variants={itemVariants}
           className="pt-8 border-t border-white/5"
@@ -711,31 +540,34 @@ export default function MyPage({ currentUser }: MyPageProps) {
               ? [1, 2, 3, 4, 5, 6].map((i) => (
                   <div
                     key={i}
-                    // [변경] 로딩 스켈레톤 크기 축소 (280/320 -> 220/260)
                     className="min-w-[220px] sm:min-w-[260px] aspect-[3/4] bg-white/5 rounded-[1.25rem] animate-pulse border border-white/5 snap-center"
                   />
                 ))
               : recs.map((product) => (
                   <div
-                    key={product.id}
-                    // [변경] 실제 카드 컨테이너 크기 축소 (280/320 -> 220/260)
+                    key={`rec-${product.id}`}
                     className="group min-w-[220px] sm:min-w-[260px] snap-center h-full flex flex-col gap-3"
                   >
                     <ProductCard
                       product={product}
-                      onOpen={() => setSelectedProduct(product)}
+                      onOpen={() => {
+                        setSelectedProduct(product);
+                        actionMutation.mutate({
+                          productId: product.id,
+                          action: 'view',
+                        });
+                        console.log(
+                          '📡 Event Triggered via Mutation:',
+                          product.name,
+                        );
+                      }}
                     />
 
-                    {/*  개선된 AI 추천 이유 디자인 */}
                     {product.why && (
-                      <div className="relative pl-4 pr-2 py-1 ml-2">
+                      <div className="sm:hidden relative pl-4 pr-2 py-1 ml-2">
                         <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-cyan-500/50 via-cyan-500/10 to-transparent group-hover:from-cyan-400 group-hover:via-cyan-400/30 transition-colors duration-300" />
-
-                        {/* 장식용: 상단 코너 점 */}
                         <div className="absolute left-[-2px] top-0 w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)] group-hover:scale-125 transition-transform duration-300" />
-
                         <div className="flex flex-col gap-1">
-                          {/* 헤더: 아이콘 + 라벨 */}
                           <div className="flex items-center gap-2">
                             <CornerDownRight
                               size={14}
@@ -745,8 +577,6 @@ export default function MyPage({ currentUser }: MyPageProps) {
                               Analysis_Log
                             </span>
                           </div>
-
-                          {/* 본문 텍스트 */}
                           <p className="text-[11px] font-mono text-slate-500 leading-tight group-hover:text-cyan-100/90 transition-colors duration-300">
                             <span className="text-cyan-600/50 mr-1 group-hover:text-cyan-400 transition-colors">
                               &gt;&gt;
@@ -762,7 +592,6 @@ export default function MyPage({ currentUser }: MyPageProps) {
         </motion.section>
       </motion.div>
 
-      {/* 모달 */}
       {selectedProduct && (
         <ProductDetailModal
           product={selectedProduct}
@@ -773,7 +602,6 @@ export default function MyPage({ currentUser }: MyPageProps) {
   );
 }
 
-// StatusCard 컴포넌트
 function StatusCard({
   label,
   count,

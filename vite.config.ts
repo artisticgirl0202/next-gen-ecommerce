@@ -1,20 +1,20 @@
 // vite.config.ts
-import react from "@vitejs/plugin-react";
-import path from "path";
-import { defineConfig } from "vite";
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: "./",
+  base: '/',
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"),
+      '@': path.resolve(__dirname, 'src'),
     },
   },
   server: {
     proxy: {
-      "/api": {
-        target: "http://localhost:8000",
+      '/api': {
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
       },
@@ -22,18 +22,18 @@ export default defineConfig({
     hmr: { overlay: false },
     watch: {
       ignored: [
-        "**/node_modules/**",
-        "**/dist/**",
-        "**/.git/**",
-        "**/venv/**",
-        "**/backend/venv/**",
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/.git/**',
+        '**/venv/**',
+        '**/backend/venv/**',
       ],
     },
   },
   optimizeDeps: {
-    include: ["react", "react-dom"],
+    include: ['react', 'react-dom'],
     esbuildOptions: {
-      loader: { ".js": "jsx", ".cjs": "jsx" },
+      loader: { '.js': 'jsx', '.cjs': 'jsx' },
     },
   },
   build: {

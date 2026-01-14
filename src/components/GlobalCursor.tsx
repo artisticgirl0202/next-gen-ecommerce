@@ -51,6 +51,7 @@ export const GlobalCursor = () => {
         'SELECT',
         'TEXTAREA',
         'LABEL',
+        'IMG',
       ];
 
       const isClickable =

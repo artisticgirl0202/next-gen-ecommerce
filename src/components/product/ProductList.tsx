@@ -1,9 +1,8 @@
-//ProductList
-
 'use client';
 
-import { MERGED_PRODUCTS } from '@/data/combined_fast';
-import type { Product } from '@/types'; // 타입 경로는 환경에 맞게 확인해주세요
+// ✅ [변경] 실시간 백엔드 데이터가 병합되는 통합 인덱스 파일을 가져옵니다.
+import { ALL_PRODUCTS } from '@/data/products_indexed';
+import type { Product } from '@/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -17,10 +16,10 @@ interface ProductListProps {
   sortBy: string;
   viewMode: 'grid' | 'list';
   limit?: number;
-  brands?: string[]; // ✅ [Added] 브랜드 필터 Prop 추가
+  brands?: string[];
 }
 
-// 🛠️ 헬퍼 함수: 대소문자/띄어쓰기 무시
+// 🛠️ 헬퍼 함수: 대소문자/띄어쓰기 무시 (Null Check 강화)
 const normalize = (str?: string) =>
   (str ?? '').toLowerCase().replace(/\s+/g, '') || '';
 
@@ -30,7 +29,7 @@ export default function ProductList({
   sortBy,
   viewMode,
   limit,
-  brands = [], // ✅ [Added] 기본값 설정
+  brands = [],
 }: ProductListProps) {
   // --- State ---
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -41,51 +40,50 @@ export default function ProductList({
 
   // 카테고리나 필터 변경 시 스크롤 및 개수 초기화
   useEffect(() => {
-    // Defer to avoid potential cascading renders when many deps change simultaneously
     Promise.resolve().then(() => setVisibleCount(24));
-  }, [category, searchQuery, sortBy, brands]); // ✅ [Added] brands 변경 시에도 초기화
+  }, [category, searchQuery, sortBy, brands]);
 
   // --- Logic: Filtering & Sorting ---
   const filteredProducts = useMemo(() => {
-    // 1. 전체 데이터 가져오기 (MERGED_PRODUCTS는 이미 [기본데이터, 데모데이터] 순서임)
-    let list = [...MERGED_PRODUCTS];
+    // ✅ [변경] 백엔드 데이터가 포함된 실시간 통합 리스트를 복사하여 사용합니다.
+    let list = [...ALL_PRODUCTS];
 
-    // 2. Category Filter
+    // 1. Category Filter
     const targetCategory = normalize(category);
-
-    // "All"이 아닐 때만 필터링
     if (targetCategory !== 'all') {
       list = list.filter((p) => normalize(p.category) === targetCategory);
     }
 
-    // 3. Search Filter
+    // 2. Search Filter
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
         (p) =>
-          p.name.toLowerCase().includes(q) ||
+          // 🛡️ [수정] p.name이 없을 경우를 대비해 빈 문자열 처리
+          (p.name || '').toLowerCase().includes(q) ||
           (p.brand || '').toLowerCase().includes(q),
       );
     }
 
-    // 4. ✅ [Added] Brand Filter
-    // URL에서 선택된 브랜드들이 있다면, 해당 브랜드의 제품만 남김
+    // 3. Brand Filter
     if (brands.length > 0) {
       list = list.filter((p) => p.brand && brands.includes(p.brand));
     }
 
-    // 5. Sorting
-    // "All" 카테고리이고 정렬이 기본(newest)일 때는 원본 순서(기본 데이터 상단) 유지
-    // 그 외의 정렬 조건일 때만 sort 실행
+    // 4. Sorting
+    // 🛡️ [수정] price가 undefined일 경우 0으로 취급하여 계산 (NaN 방지)
     if (sortBy === 'price_low') {
-      list.sort((a, b) => a.price - b.price);
+      // ✅ [수정] Number()로 감싸서 확실한 숫자 타입 보장
+      list.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0));
     } else if (sortBy === 'price_high') {
-      list.sort((a, b) => b.price - a.price);
+      // ✅ [수정] Number()로 감싸서 확실한 숫자 타입 보장
+      list.sort((a, b) => Number(b.price ?? 0) - Number(a.price ?? 0));
     }
-    // sortBy가 "newest"이거나 없으면 이미 combined_fast.ts에서 정한 순서(기본 -> 데모) 유지
+    // sortBy가 "newest"이거나 없으면 인덱싱된 순서(기본 -> 백엔드 추가분) 유지
 
     return list;
-  }, [category, searchQuery, sortBy, brands]); // ✅ [Added] 의존성 배열에 brands 추가
+    // ✅ [중요] ALL_PRODUCTS.length를 감지하여 백엔드 데이터 로드 완료 시 자동으로 목록을 갱신합니다.
+  }, [category, searchQuery, sortBy, brands, ALL_PRODUCTS.length]);
 
   // --- Pagination (Infinite Scroll) ---
   const displayedProducts = useMemo(() => {
@@ -112,6 +110,12 @@ export default function ProductList({
   }, [hasMore, limit]);
 
   const isList = viewMode === 'list';
+
+  // 🛡️ 클릭 핸들러: 타입을 안전하게 변환하여 State에 저장
+  const handleProductClick = (product: any) => {
+    // Product 타입과 호환되도록 강제 형변환 (필요시 id 확인 로직 추가 가능)
+    setSelectedProduct(product as Product);
+  };
 
   return (
     <>
@@ -172,7 +176,7 @@ export default function ProductList({
                   >
                     <img
                       src={product.image}
-                      alt={product.name}
+                      alt={product.name || 'Product Image'}
                       loading="lazy"
                       className={`
                         w-full h-full transition-transform duration-700 group-hover:scale-105
@@ -184,7 +188,7 @@ export default function ProductList({
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedProduct(product);
+                        handleProductClick(product);
                       }}
                     />
                     <div
@@ -256,14 +260,14 @@ export default function ProductList({
                         <span
                           className={`font-black text-white tracking-tight ${isList ? 'text-xl md:text-2xl' : 'text-lg sm:text-2xl'}`}
                         >
-                          ${product.price?.toLocaleString()}
+                          ${(product.price ?? 0).toLocaleString()}
                         </span>
                       </div>
 
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedProduct(product);
+                          handleProductClick(product);
                         }}
                         className={`
     relative group/btn overflow-hidden rounded-xl

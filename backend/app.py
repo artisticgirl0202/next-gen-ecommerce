@@ -30,23 +30,29 @@ from backend.routers import events
 
 from backend.services.kafka_producer import get_producer, stop_producer
 
-
+from backend.db import Base, engine
+# 중요: 모델 로딩
+import backend.models.order
 
 # safe orders import
 
-try:
+#try:
 
-    from backend.routers.orders import router as orders_router
+# 1. try-except 없이 직접 import
+from backend.routers.orders import router as orders_router
 
-    _HAS_ORDERS = True
+# 2. 이 변수를 반드시 True로 설정해야 밑에서 에러가 안 납니다.
+_HAS_ORDERS = True
 
-except Exception as ex:
+# except Exception as ex:
 
-    orders_router = None
+#     orders_router = None
 
-    _HAS_ORDERS = False
-
-    logger.error("❌ Orders router import failed", exc_info=ex)
+#     _HAS_ORDERS = True
+# except Exception as ex: <-- Comment out
+#    orders_router = None
+#    _HAS_ORDERS = False
+#    logger.error("❌ Orders router import failed", exc_info=ex)
 
 
 
@@ -105,7 +111,13 @@ app.add_middleware(
 # 3. Startup Event 개선
 
 @app.on_event("startup")
-async def startup_event():
+async def on_startup():
+    # 1) DB 스키마(테이블) 보장 — models가 import 된 이후에 호출해야 함
+    #    (무거우면 별도 쓰레드로 실행할 수도 있음)
+    Base.metadata.create_all(bind=engine)
+    logger.info("✅ DB tables ensured")
+
+    # 2) Kafka 초기화 (환경변수 ENABLE_KAFKA=true 인 경우에만)
     if not ENABLE_KAFKA:
         logger.info("🚫 Kafka disabled (ENABLE_KAFKA=false)")
         return
@@ -174,3 +186,6 @@ else:
 def root():
 
     return {"ok": True, "service": "next-gen-ecom-backend"}
+
+
+

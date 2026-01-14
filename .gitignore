@@ -29,6 +29,7 @@ dist-ssr
 # virtualenvs
 .venv/
 venv/
+.venv/
 env/
 ENV/
 .Python
@@ -52,7 +53,7 @@ dist/
 htmlcov/
 
 # backend local env
-/backend/.env
+backend/.env
 /backend/.env.local
 
 # Local databases

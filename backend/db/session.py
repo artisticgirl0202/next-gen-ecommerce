@@ -1,6 +1,7 @@
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker
+from backend.db.base import Base
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -12,8 +13,8 @@ if not DATABASE_URL:
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,
     future=True,
+    pool_pre_ping=True,   # 끊어진 커넥션 자동 감지
 )
 
 SessionLocal = sessionmaker(
@@ -21,8 +22,6 @@ SessionLocal = sessionmaker(
     autoflush=False,
     bind=engine,
 )
-
-Base = declarative_base()
 
 def get_db():
     db = SessionLocal()

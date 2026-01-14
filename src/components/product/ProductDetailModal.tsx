@@ -1,5 +1,3 @@
-//ProductDetailModal.tsx
-import { fetchHybridRecommendations } from '@/api/recommend';
 import { useAuth } from '@/store/authStore';
 import { useCart } from '@/store/cartStore';
 import type { Product } from '@/types';
@@ -19,13 +17,11 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// [변경 1] 로컬 데모 데이터를 import 합니다.
-// (경로는 실제 프로젝트 구조에 맞게 수정해주세요, 예: "@/data/demo_products_500.json")
-import demoProductsRaw from '@/data/demo_products_500.json';
+import { fetchHybridRecsAPI, sendAIFeedbackAPI } from '@/api/integration';
+import { ALL_PRODUCTS } from '@/data/products_indexed';
 
-// demoProducts가 배열인지 확인하고 타입 캐스팅 (데이터 구조에 따라 다를 수 있음)
-const allDemoProducts = (Array.isArray(demoProductsRaw)
-  ? demoProductsRaw
+const allDemoProducts = (Array.isArray(ALL_PRODUCTS)
+  ? ALL_PRODUCTS
   : []) as unknown as Product[];
 
 type Recommendation = Product & {
@@ -40,25 +36,72 @@ export default function ProductDetailModal({
   product: Product;
   onClose: () => void;
 }) {
-  // ... (기존 state 및 hook 코드는 동일) ...
   const [product, setProduct] = useState<Product>(initialProduct);
-  const modalScrollRef = useRef<HTMLDivElement>(null);
-  const infoScrollRef = useRef<HTMLDivElement>(null);
-  const recsScrollRef = useRef<HTMLDivElement>(null);
-
-  const { user, isLoggedIn } = useAuth();
-  const addItem = useCart((state) => state.addItem);
-  const [addedFeedback, setAddedFeedback] = useState(false);
-  const feedbackTimeoutRef = useRef<number | null>(null);
   const [recommendations, setRecommendations] = useState<
     Recommendation[] | null
   >(null);
   const [recsLoading, setRecsLoading] = useState(false);
+  const [addedFeedback, setAddedFeedback] = useState(false);
 
-  const userId = (user as any)?.id ?? 1;
+  const modalScrollRef = useRef<HTMLDivElement>(null);
+  const infoScrollRef = useRef<HTMLDivElement>(null);
+  const recsScrollRef = useRef<HTMLDivElement>(null);
+  const feedbackTimeoutRef = useRef<number | null>(null);
+
+  const { user, isLoggedIn } = useAuth();
+  const userId = (user as any)?.id ?? 0;
+  const addItem = useCart((state) => state.addItem);
   const navigate = useNavigate();
 
-  // ... (scrollRecs, handleProductChange, handleBuyNow, handleAdd 등 기존 함수 동일) ...
+  // 헬퍼: 추천 데이터 없을 시 로컬 데이터 사용
+  const getFallbackRecommendations = (): Recommendation[] => {
+    if (!allDemoProducts || allDemoProducts.length === 0) return [];
+    return allDemoProducts
+      .filter((p) => p.id !== product.id)
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 5)
+      .map((p) => ({
+        ...p,
+        why: 'Popular in this category',
+        confidence: 0.8,
+      }));
+  };
+
+  // 통합된 useEffect: 추천 데이터 가져오기 및 AI 로그 전송
+  useEffect(() => {
+    if (!product) return;
+
+    // 1. 추천 로딩 시작
+    setRecsLoading(true);
+    setRecommendations(null); // 이전 데이터 초기화
+
+    fetchHybridRecsAPI(product.id)
+      .then((recs) => {
+        if (recs && recs.length > 0) {
+          setRecommendations(recs);
+        } else {
+          console.log('Using local fallback recommendations');
+          setRecommendations(getFallbackRecommendations());
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch recs:', err);
+        setRecommendations(getFallbackRecommendations());
+      })
+      .finally(() => {
+        setRecsLoading(false);
+      });
+
+    // 2. 상세 페이지 진입 로그(Interaction) 전송
+    sendAIFeedbackAPI({
+      userId: String(userId),
+      productId: product.id,
+      action: 'view_details',
+      orderId: -1,
+    });
+
+    console.log(`📡 Event Sent: view_details for Product ${product.id}`);
+  }, [product.id, userId]); // product.id가 바뀌면 재실행
 
   const scrollRecs = (direction: 'left' | 'right') => {
     if (recsScrollRef.current) {
@@ -72,12 +115,11 @@ export default function ProductDetailModal({
 
   const handleProductChange = (newProduct: Product) => {
     setProduct(newProduct);
-    if (modalScrollRef.current) {
+    // 스크롤 초기화
+    if (modalScrollRef.current)
       modalScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-    if (infoScrollRef.current) {
+    if (infoScrollRef.current)
       infoScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
   };
 
   const handleBuyNow = () => {
@@ -103,111 +145,52 @@ export default function ProductDetailModal({
       image: product.image,
       qty: 1,
     });
+
+    // UI 피드백
     setAddedFeedback(true);
-    if (feedbackTimeoutRef.current) {
-      clearTimeout(feedbackTimeoutRef.current);
-    }
+    if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
     feedbackTimeoutRef.current = window.setTimeout(
       () => setAddedFeedback(false),
       1000,
     );
+
+    // AI 피드백 전송
+    sendAIFeedbackAPI({
+      userId: String(userId),
+      productId: product.id,
+      action: 'add_to_cart',
+    });
   };
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'unset';
-      if (feedbackTimeoutRef.current) {
-        clearTimeout(feedbackTimeoutRef.current);
-        feedbackTimeoutRef.current = null;
-      }
-    };
-  }, []);
-
-  // [변경 2] useEffect 로직 수정: API 실패/빈값 시 로컬 데이터 사용
-  useEffect(() => {
-    if (!product) return;
-    const controller = new AbortController();
-    let mounted = true;
-
-    // 폴백 함수: 현재 상품과 같은 카테고리인 상품을 로컬 데이터에서 찾음
-    const getFallbackRecommendations = (): Recommendation[] => {
-      // 1. 현재 상품 제외
-      let candidates = allDemoProducts.filter((p) => p.id !== product.id);
-
-      // 2. 같은 카테고리 우선 필터링 (product.category가 배열일 수도 문자열일 수도 있음)
-      const currentCat = Array.isArray(product.categories)
-        ? product.categories[0]
-        : product.category;
-
-      const sameCategory = candidates.filter((p) => {
-        const pCat = Array.isArray(p.categories) ? p.categories[0] : p.category;
-        return pCat === currentCat;
-      });
-
-      // 3. 같은 카테고리가 있으면 그거 쓰고, 없으면 그냥 전체에서 랜덤 섞기
-      const source = sameCategory.length >= 4 ? sameCategory : candidates;
-
-      // 4. 랜덤으로 6개 뽑기 (간단한 shuffle)
-      const shuffled = [...source].sort(() => 0.5 - Math.random()).slice(0, 6);
-
-      // 5. why 속성 추가
-      return shuffled.map((p) => ({
-        ...p,
-        why: sameCategory.length >= 4 ? 'Similar Category' : 'Popular Item',
-        confidence: 0.8,
-      }));
-    };
-
-    Promise.resolve().then(() => {
-      if (mounted) setRecsLoading(true);
-    });
-
-    fetchHybridRecommendations(product.id, 6, controller.signal)
-      .then((json) => {
-        if (!mounted) return;
-        let recs = Array.isArray(json?.recommendations)
-          ? json.recommendations
-          : Array.isArray(json)
-            ? json
-            : [];
-
-        // [핵심] API 결과가 비어있으면 로컬 데이터에서 가져옴
-        if (!recs || recs.length === 0) {
-          console.log('API returned empty, using fallback data');
-          recs = getFallbackRecommendations();
-        }
-
-        setRecommendations(recs);
-      })
-      .catch(() => {
-        // [핵심] API 에러 시에도 로컬 데이터 사용
-        if (mounted) {
-          console.log('API failed, using fallback data');
-          setRecommendations(getFallbackRecommendations());
-        }
-      })
-      .finally(() => {
-        if (mounted) setRecsLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-      controller.abort();
-    };
-  }, [product, userId]); // allDemoProducts는 static이라 의존성 제외 가능
-
-  // ... (나머지 렌더링 로직 동일) ...
   const isSvg =
     typeof product.image === 'string' &&
     product.image.toLowerCase().endsWith('.svg');
   const getVal = (val?: string | string[]) =>
     Array.isArray(val) ? val.join(' / ') : (val ?? 'Information not specified');
+  const translateWhy = (text: string | undefined): string => {
+    if (!text) return 'Optimal match based on profile.';
 
+    // 이미 영어인 경우 그대로 반환
+    if (/^[A-Za-z0-9\s.,!'-]+$/.test(text)) return text;
+
+    // 키워드 매핑
+    if (text.includes('콘텐츠') || text.includes('패턴'))
+      return 'Content pattern match';
+    if (text.includes('유사') || text.includes('비슷한'))
+      return 'Based on product similarity';
+    if (text.includes('대체')) return 'Strategic alternative';
+    if (text.includes('인기') || text.includes('많이 찾'))
+      return 'Trending in this category';
+    if (text.includes('함께') || text.includes('자주'))
+      return 'Frequently bought together';
+    if (text.includes('선호') || text.includes('취향'))
+      return 'Refinement of your preference';
+    if (text.includes('카테고리')) return 'Category-specific suggestion';
+
+    return 'AI Suggested Neural Match'; // 기본값
+  };
   return (
-    // ... (JSX 리턴 부분은 기존 코드 그대로 유지) ...
     <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
-      {/* 기존 JSX 내용 복사 붙여넣기 */}
       <div
         className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl cursor-default"
         onClick={onClose}
@@ -216,8 +199,6 @@ export default function ProductDetailModal({
         ref={modalScrollRef}
         className="relative z-[2000] w-full max-w-6xl max-h-[90vh] bg-gradient-to-b from-slate-950 to-slate-900 border border-cyan-500/30 rounded-[2rem] shadow-[0_0_50px_rgba(6,182,212,0.15)] flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden no-scrollbar"
       >
-        {/* ... (이하 동일) ... */}
-
         {/* CLOSE BUTTON */}
         <div className="sticky top-6 right-6 z-50 flex justify-end w-full pointer-events-none pr-6 -mb-12 lg:absolute lg:top-6 lg:right-6 lg:mb-0 lg:pr-0">
           <button
@@ -325,9 +306,8 @@ export default function ProductDetailModal({
             </div>
           </div>
 
-          {/* Buttons - Redesigned Colors */}
+          {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 mb-12">
-            {/* ADD TO CART BUTTON */}
             <button
               onClick={handleAdd}
               disabled={addedFeedback}
@@ -336,8 +316,7 @@ export default function ProductDetailModal({
                   addedFeedback
                     ? 'bg-emerald-500 border-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)]'
                     : 'bg-slate-950 border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-slate-950 hover:border-cyan-500 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]'
-                }
-                `}
+                }`}
             >
               {addedFeedback ? (
                 <>
@@ -350,7 +329,6 @@ export default function ProductDetailModal({
               )}
             </button>
 
-            {/* BUY NOW BUTTON */}
             <button
               onClick={handleBuyNow}
               className="cursor-pointer flex-1 py-5 rounded-2xl font-black flex items-center justify-center gap-3 transition-all uppercase text-xs tracking-widest
@@ -411,7 +389,6 @@ export default function ProductDetailModal({
               <h3 className="text-white text-[10px] font-black uppercase tracking-[0.4em] italic opacity-50">
                 Related Modules
               </h3>
-
               <div className="flex gap-8 px-4">
                 <button
                   onClick={() => scrollRecs('left')}
@@ -430,7 +407,6 @@ export default function ProductDetailModal({
 
             {recsLoading ? (
               <div className="flex gap-6 py-6 px-1 overflow-hidden">
-                {/* 로딩 스켈레톤 유지... */}
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
@@ -450,33 +426,20 @@ export default function ProductDetailModal({
                 {recommendations?.map((r) => (
                   <div
                     key={r.id}
-                    /* 1. 카드 컨테이너: flex-col을 사용하여 내용을 위에서 아래로 정렬하고 버튼을 바닥에 붙임 */
-                    className="
-                      w-56 shrink-0 relative p-4 flex flex-col
-                      bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-md
-                      rounded-3xl border border-white/10
-                      hover:border-cyan-500/40 hover:bg-slate-800/60
-                      hover:shadow-[0_0_30px_-10px_rgba(6,182,212,0.3)]
-                      transition-all duration-500 ease-out group
-                    "
+                    className="w-56 shrink-0 relative p-4 flex flex-col bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-md rounded-3xl border border-white/10 hover:border-cyan-500/40 hover:bg-slate-800/60 hover:shadow-[0_0_30px_-10px_rgba(6,182,212,0.3)] transition-all duration-500 ease-out group"
                   >
-                    {/* --- 상단 컨텐츠 영역 (flex-1로 남은 공간 차지) --- */}
                     <div className="flex-1 mb-3">
-                      {/* FOR YOU 배지 */}
                       <div className="mb-3 flex justify-between items-start">
                         <h4 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/5 border border-cyan-500/10 text-cyan-400 text-[10px] font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(6,182,212,0.1)]">
                           <Sparkles size={10} className="text-cyan-300" /> For
                           You
                         </h4>
                       </div>
-
-                      {/* 이미지 영역 */}
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
                           handleProductChange(r);
                         }}
-                        data-cursor-interactive="true"
                         className="aspect-square rounded-2xl overflow-hidden bg-slate-950/50 border border-white/5 relative mb-4 group-hover:border-cyan-500/20 transition-colors duration-500"
                       >
                         <img
@@ -486,8 +449,6 @@ export default function ProductDetailModal({
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-60" />
                       </div>
-
-                      {/* 텍스트 정보 */}
                       <div className="space-y-1">
                         <div className="flex justify-between items-start gap-2">
                           <div className="text-[11px] font-black text-slate-200 uppercase leading-tight group-hover:text-cyan-200 transition-colors line-clamp-2">
@@ -497,50 +458,27 @@ export default function ProductDetailModal({
                             ${r.price.toLocaleString()}
                           </div>
                         </div>
-
                         <div className="pt-2 mt-2 border-t border-white/5">
-                          <p className="text-[9px] leading-relaxed text-slate-500 font-medium group-hover:text-slate-400 transition-colors italic line-clamp-2">
+                          <p className="text-[10px] leading-relaxed text-slate-500 font-medium group-hover:text-slate-400 transition-colors italic line-clamp-2">
                             <span className="text-cyan-600/70 not-italic font-bold mr-1 text-[8px] uppercase tracking-wider">
                               Analysis:
                             </span>
-                            {r.why || 'Optimal match based on profile.'}
+                            {translateWhy(r.why) ||
+                              'Optimal match based on profile.'}
                           </p>
                         </div>
                       </div>
                     </div>
-
-                    {/* --- 하단 버튼 영역 (여기에 요청하신 디자인 적용) --- */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleProductChange(r);
                       }}
-                      data-cursor-interactive="true"
-                      className="
-                        relative group/btn overflow-hidden rounded-xl
-                        
-                        /* 1. 배경 & 테두리 (Future Tech Style - 요청 사항 반영) */
-                        bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
-                        border border-cyan-500/20
-                        
-                        /* 2. 호버 효과 (Glow & Lighten) */
-                        hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
-                        hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]
-                        focus:outline-none transition-all duration-300
-                        
-                        /* 3. 기본 레이아웃 */
-                        flex items-center justify-center cursor-pointer gap-2
-                        
-                        /* 4. 크기 (w-full로 하단 꽉 채움) */
-                        w-full py-2.5 sm:py-3 mt-auto
-                      "
+                      className="relative group/btn overflow-hidden rounded-xl bg-gradient-to-r from-cyan-900/20 to-cyan-800/20 border border-cyan-500/20 hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] focus:outline-none transition-all duration-300 flex items-center justify-center cursor-pointer gap-2 w-full py-2.5 sm:py-3 mt-auto"
                     >
-                      {/* 버튼 텍스트 */}
                       <span className="relative z-10 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-cyan-400 group-hover/btn:text-white transition-colors duration-300">
                         Access
                       </span>
-
-                      {/* 배경 스캔 효과 (로봇 테마 디테일) */}
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_1.5s_infinite] pointer-events-none" />
                     </button>
                   </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { sendAIFeedbackAPI } from '@/api/integration';
 import { useCart } from '@/store/cartStore';
 import { useUserStore } from '@/store/userStore';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -11,18 +12,18 @@ import {
   Globe,
   Lock,
   MapPin,
+  Minus, // 추가됨
+  Plus,
   ScanLine,
   ShieldCheck,
   Smartphone,
   User,
   Zap,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-/**
- * 차세대 AI 알고리즘 시스템 스타일의 에러 메시지 컴포넌트
- */
+// [✨ 병합 포인트 1] 커스텀 에러 메시지 컴포넌트
 const ValidationAlert = ({
   message,
   visible,
@@ -41,9 +42,7 @@ const ValidationAlert = ({
           className="overflow-hidden"
         >
           <div className="mt-2 relative bg-rose-950/30 border border-rose-500/30 rounded-xl p-3 flex items-start gap-3 backdrop-blur-sm">
-            {/* 왼쪽 포인트 바 - 시스템 경고 느낌 */}
             <div className="absolute left-0 top-2 bottom-2 w-[2px] bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.8)]" />
-
             <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
             <div className="flex flex-col">
               <span className="text-[10px] font-mono font-bold text-rose-500 uppercase tracking-widest mb-0.5">
@@ -60,13 +59,11 @@ const ValidationAlert = ({
   );
 };
 
-function makeOrderId() {
-  return `ORD-${Math.random().toString(36).toUpperCase().substring(2, 9)}`;
-}
+// makeOrderId 함수는 이제 백엔드 ID를 쓰므로 필요 없어서 제거했습니다.
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { items, removeItem } = useCart();
+  const { items, removeItem, updateQty } = useCart();
   const { addOrder, getCurrentUser } = useUserStore();
 
   const userData = getCurrentUser();
@@ -81,11 +78,34 @@ export default function CheckoutPage() {
     items.map((i) => i.id),
   );
 
-  // [수정 1] 초기 에러 상태를 모두 빈 문자열로 변경 (처음부터 에러가 안 보이게 함)
+  // [✨ 병합 포인트 2] 에러 상태 관리
   const [errors, setErrors] = useState({
     cardNumber: '',
     expiry: '',
     cvc: '',
+  });
+  const { selectedItems, subtotal, tax, total } = useMemo(() => {
+    // 1. 선택된 아이템만 필터링
+    const selected = items.filter((item) => selectedIds.includes(item.id));
+
+    // 2. 소계 계산 (단가 * 수량)
+    const sub = selected.reduce((acc, item) => acc + item.price * item.qty, 0);
+
+    // 3. 세금 및 합계
+    const t = sub * 0.1;
+    const tot = sub + t;
+
+    return {
+      selectedItems: selected,
+      subtotal: sub,
+      tax: t,
+      total: tot,
+    };
+  }, [items, selectedIds]);
+  const [shippingErrors, setShippingErrors] = useState({
+    name: '',
+    phone: '',
+    address: '',
   });
 
   const [paymentForm, setPaymentForm] = useState({
@@ -103,24 +123,22 @@ export default function CheckoutPage() {
         : '',
   });
 
-  const [shippingErrors, setShippingErrors] = useState({
-    name: '',
-    phone: '',
-    address: '',
-  });
-
   const [isManualAddress, setIsManualAddress] = useState(
     !profile.addresses || profile.addresses.length === 0,
   );
 
-  const selectedItems = items.filter((item) => selectedIds.includes(item.id));
-  const subtotal = selectedItems.reduce(
-    (acc, item) => acc + item.price * item.qty,
-    0,
-  );
-  const tax = subtotal * 0.1;
-  const total = subtotal + tax;
+  const handleUpdateQty = (
+    e: React.MouseEvent,
+    id: number,
+    delta: number, // 현재 수량을 인자로 받을 필요가 없습니다.
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
 
+    // 스토어의 updateQty는 (id, delta)를 받으므로 +1 또는 -1만 보냅니다.
+    updateQty(id, delta);
+  };
+  // [✨ 병합 포인트 3] 입력 핸들러
   const handleShippingChange = (field: string, value: string) => {
     setShippingForm((prev) => ({ ...prev, [field]: value }));
     if (value.trim()) {
@@ -148,74 +166,109 @@ export default function CheckoutPage() {
     }
   };
 
-  // 핸들러: 최종 결제 제출
-  const handleFinalPayment = (e: React.FormEvent) => {
+  // ✅ [수정됨] handleFinalPayment: 백엔드 연동 로직만 남김
+  const handleFinalPayment = async (e: React.FormEvent) => {
     e.preventDefault();
 
     let hasError = false;
 
-    // 유효성 검사 1: 아이템 선택 여부
-    if (selectedIds.length === 0) {
-      alert('Select items to process.');
-      return;
+    // Validation Check
+    if (!shippingForm.name || !shippingForm.phone || !shippingForm.address) {
+      setShippingErrors({
+        name: !shippingForm.name ? 'Required' : '',
+        phone: !shippingForm.phone ? 'Required' : '',
+        address: !shippingForm.address ? 'Required' : '',
+      });
+      hasError = true;
     }
 
-    // 유효성 검사 2: 배송 정보 (이름, 전화번호, 주소) - required 대신 직접 검사
-    const newShippingErrors = { name: '', phone: '', address: '' };
+    if (!paymentForm.cardNumber || !paymentForm.expiry || !paymentForm.cvc) {
+      setErrors({
+        cardNumber: !paymentForm.cardNumber ? 'Required' : '',
+        expiry: !paymentForm.expiry ? 'Required' : '',
+        cvc: !paymentForm.cvc ? 'Required' : '',
+      });
+      hasError = true;
+    }
 
-    if (!shippingForm.name.trim()) {
-      newShippingErrors.name = 'RECIPIENT ID REQUIRED';
-      hasError = true;
-    }
-    if (!shippingForm.phone.trim()) {
-      newShippingErrors.phone = 'COMMS CHANNEL REQUIRED';
-      hasError = true;
-    }
-    if (!shippingForm.address.trim()) {
-      newShippingErrors.address = 'TARGET SECTOR REQUIRED';
-      hasError = true;
-    }
-    setShippingErrors(newShippingErrors);
-
-    // 유효성 검사 3: 결제 정보
-    const newPaymentErrors = { cardNumber: '', expiry: '', cvc: '' };
-
-    if (!paymentForm.cardNumber.trim()) {
-      newPaymentErrors.cardNumber = 'SEQUENCE REQUIRED';
-      hasError = true;
-    }
-    if (!paymentForm.expiry.trim()) {
-      newPaymentErrors.expiry = 'TOKEN REQUIRED';
-      hasError = true;
-    }
-    if (!paymentForm.cvc.trim()) {
-      newPaymentErrors.cvc = 'SECURITY CODE REQUIRED';
-      hasError = true;
-    }
-    setErrors(newPaymentErrors);
-
-    // 에러가 하나라도 있으면 중단
     if (hasError) return;
 
-    // 성공 시 주문 생성
-    const orderItems = selectedItems.map((it) => ({
-      productId: it.id,
-      qty: it.qty,
-    }));
+    // 🚀 [백엔드 연동 시작]
+    try {
+      // 1. 백엔드에 보낼 데이터 준비
+      const orderPayload = {
+        userId: (userData as any)?.id || 1,
+        items: selectedItems.map((item) => ({
+          productId: item.id,
+          qty: item.qty,
+          price: item.price,
+        })),
+      };
 
-    const newOrder = {
-      id: makeOrderId(),
-      date: new Date().toLocaleDateString(),
-      items: orderItems,
-      total: total,
-      status: 'Processing' as const,
-      shippingInfo: shippingForm,
-    };
+      // 2. 백엔드로 주문 요청 (POST)
+      const response = await fetch('/api/orders/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderPayload),
+      });
 
-    addOrder(newOrder);
-    selectedIds.forEach((id) => removeItem(id));
-    navigate('/payment-success', { state: newOrder });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || '주문 생성 실패');
+      }
+
+      // 3. 백엔드 응답 받기 (order_no 포함)
+      const data = await response.json();
+      console.log('✅ 주문 성공! Server Response:', data);
+
+      // 4. 프론트엔드 상태 업데이트용
+      const safeId = data.order_no || data.id || Math.floor(Date.now() / 1000);
+
+      const newOrder = {
+        id: safeId,
+        items: selectedItems.map((item) => ({
+          ...item,
+          productId: item.id,
+        })),
+        subtotal,
+        tax,
+        total,
+        shipping: shippingForm,
+        date: new Date().toISOString(),
+        status: 'Processing' as const,
+        paymentMethod: 'credit_card',
+      };
+
+      // 5. 로컬 스토어 업데이트
+      addOrder(newOrder);
+      selectedIds.forEach((id) => removeItem(id));
+
+      // 6. AI 피드백 전송
+      try {
+        await Promise.all(
+          selectedItems.map((item) =>
+            sendAIFeedbackAPI({
+              userId: (userData as any)?.id || 1,
+              productId: item.id,
+              action: 'purchase',
+              orderId: safeId,
+            }),
+          ),
+        );
+      } catch (err) {
+        console.error('[Checkout] AI Feedback Warning:', err);
+      }
+
+      // 7. 성공 페이지 이동
+      navigate('/payment-success', { state: newOrder });
+    } catch (error) {
+      console.error('❌ 주문 실패:', error);
+      alert('주문 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
   };
+  // ⛔️ 기존의 중복된 코드(makeOrderId 호출, navigate 중복 등)는 여기서 모두 제거했습니다.
 
   // --- 공통 스타일 정의 ---
   const inputGroupClass = 'relative group';
@@ -230,6 +283,7 @@ export default function CheckoutPage() {
   const baseInputClass =
     'w-full bg-slate-900/50 border rounded-2xl py-4 pl-12 pr-4 text-sm sm:text-base text-white placeholder-slate-600 focus:outline-none focus:ring-2 transition-all duration-300';
 
+  // [✨ 병합 포인트 5] 에러 발생 시 스타일 변경
   const getInputClass = (hasError: boolean) => `
     w-full bg-transparent border rounded-lg px-4 py-3 pl-10 text-sm outline-none transition-all duration-300 font-mono
     ${
@@ -250,7 +304,7 @@ export default function CheckoutPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14 relative z-10 w-full flex-1">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 sm:mb-12">
-          {/* ... Header 내용 동일 ... */}
+          {/* Header 부분 생략 (기존 동일) */}
           <div className="flex items-start gap-4 sm:gap-6">
             <button
               onClick={() => navigate(-1)}
@@ -272,7 +326,7 @@ export default function CheckoutPage() {
           </div>
         </header>
 
-        {/* [수정 2] noValidate 속성 추가: 브라우저 기본 검증을 끄고 커스텀 로직 사용 */}
+        {/* [✨ 병합 포인트 6] form 태그 */}
         <form
           onSubmit={handleFinalPayment}
           noValidate
@@ -313,6 +367,7 @@ export default function CheckoutPage() {
                       className={getInputClass(!!shippingErrors.name)}
                     />
                   </div>
+                  {/* [✨ 병합 포인트 7] */}
                   <ValidationAlert
                     visible={!!shippingErrors.name}
                     message={shippingErrors.name}
@@ -518,7 +573,7 @@ export default function CheckoutPage() {
             </motion.div>
           </div>
 
-          {/* RIGHT COLUMN: Order Review (변경 없음) */}
+          {/* RIGHT COLUMN: Order Review */}
           <div className="lg:col-span-5 w-full">
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -535,6 +590,7 @@ export default function CheckoutPage() {
               <div className="space-y-3 mb-8 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                 {items.map((item) => {
                   const isSelected = selectedIds.includes(item.id);
+
                   return (
                     <div
                       key={item.id}
@@ -551,34 +607,77 @@ export default function CheckoutPage() {
                           : 'bg-white/[0.02] border-white/5 opacity-50'
                       }`}
                     >
+                      {/* 체크박스 영역 */}
                       <div
-                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${isSelected ? 'bg-cyan-500 border-cyan-400' : 'border-slate-700'}`}
+                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all shrink-0 ${
+                          isSelected
+                            ? 'bg-cyan-500 border-cyan-400'
+                            : 'border-slate-700'
+                        }`}
                       >
                         {isSelected && (
                           <CheckCircle2 size={12} className="text-black" />
                         )}
                       </div>
+
+                      {/* 상품 이미지 */}
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="w-10 h-10 rounded-lg object-cover"
+                        className="w-10 h-10 rounded-lg object-cover shrink-0"
                       />
+
+                      {/* 상품 정보 */}
                       <div className="flex-1 min-w-0">
                         <div
-                          className={`text-xs font-bold uppercase truncate ${isSelected ? 'text-white' : 'text-slate-500'}`}
+                          className={`text-xs font-bold uppercase truncate ${
+                            isSelected ? 'text-white' : 'text-slate-500'
+                          }`}
                         >
                           {item.name}
                         </div>
-                        <div className="text-[10px] font-mono text-cyan-500/60">
-                          Unit: {item.id}
+
+                        {/* 수량 조절기 (중요: e.stopPropagation 적용) */}
+                        {/* 수량 조절기 (이미지 디자인 적용) */}
+                        <div className="flex items-center mt-2">
+                          <div
+                            className="flex items-center justify-between w-28 h-9 bg-slate-950 border border-white/10 rounded-xl px-2"
+                            onClick={(e) => e.stopPropagation()} // 컨트롤러 영역 클릭 시 부모 이벤트 차단
+                          >
+                            {/* 마이너스 버튼 */}
+
+                            <motion.button
+                              type="button"
+                              onClick={(e) => handleUpdateQty(e, item.id, -1)} // 직접 -1 전달
+                              className="..."
+                            >
+                              <Minus size={14} />
+                            </motion.button>
+
+                            {/* 수량 텍스트 */}
+                            <span className="text-sm font-bold text-white min-w-[24px] text-center select-none font-mono">
+                              {item.qty}
+                            </span>
+
+                            {/* 플러스 버튼 */}
+                            <motion.button
+                              type="button"
+                              onClick={(e) => handleUpdateQty(e, item.id, 1)} // 직접 1 전달
+                              className="..."
+                            >
+                              <Plus size={14} />
+                            </motion.button>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-[10px] text-slate-500">
+
+                      {/* 가격 정보 */}
+                      <div className="text-right shrink-0">
+                        <div className="text-[10px] text-slate-500 font-mono">
                           x{item.qty}
                         </div>
-                        <div className="text-xs font-black font-mono text-white">
-                          ${item.price}
+                        <div className="text-xs font-black font-mono text-cyan-400">
+                          ${(item.price * item.qty).toLocaleString()}
                         </div>
                       </div>
                     </div>
