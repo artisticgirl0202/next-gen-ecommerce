@@ -73,6 +73,8 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ./backend/.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
     volumes:
       - ./backend:/app/backend
       - redis-data:/data
