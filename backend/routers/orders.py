@@ -115,9 +115,12 @@ def api_get_order(order_identifier: str, db: Session = Depends(get_db)):
     )
 
 @router.get("/user/{user_id}", response_model=List[OrderResponse])
-def api_get_user_orders(user_id: int, db: Session = Depends(get_db)):
+def api_get_user_orders(user_id: Union[int, str], db: Session = Depends(get_db)):
+    # DB에 저장된 타입에 맞춰 필터링
+    query_id = int(user_id) if str(user_id).isdigit() else user_id
+
     orders = db.query(OrderModel)\
-               .filter(OrderModel.user_id == user_id)\
+               .filter(OrderModel.user_id == query_id)\
                .order_by(OrderModel.created_at.desc())\
                .all()
 
@@ -138,3 +141,39 @@ def api_get_user_orders(user_id: int, db: Session = Depends(get_db)):
             )
         )
     return results
+
+# [보완] enrich_items_with_images 함수 내부
+def enrich_items_with_images(db: Session, items: List[Any]) -> List[Any]:
+    if not items: return []
+    enriched_items = []
+
+    for item in items:
+        # dict 변환 로직 유지...
+        temp_dict = item.copy() if isinstance(item, dict) else {c.name: getattr(item, c.name) for c in item.__table__.columns} if hasattr(item, "__table__") else dict(item)
+
+        # 기본값 설정 (매칭되는 상품이 없을 때 422 에러 방지용)
+        temp_dict.setdefault("title", "Unknown Product")
+        temp_dict.setdefault("image", "")
+        temp_dict.setdefault("price", 0.0)
+        temp_dict.setdefault("qty", temp_dict.get("quantity", 1))
+
+        pid = temp_dict.get("product_id") or temp_dict.get("productId") or temp_dict.get("id")
+        if pid:
+            try:
+                # pid 타입에 따른 유연한 조회
+                sql = text("SELECT name, image, price FROM products WHERE id = :pid")
+                result = db.execute(sql, {"pid": str(pid)}).fetchone()
+
+                if not result and str(pid).isdigit():
+                    result = db.execute(sql, {"pid": int(pid)}).fetchone()
+
+                if result:
+                    temp_dict["title"] = result[0]
+                    temp_dict["image"] = result[1] or ""
+                    temp_dict["price"] = float(result[2]) if result[2] else 0.0
+            except Exception as e:
+                print(f"⚠️ 상품 조회 실패 (ID: {pid}): {e}")
+
+        enriched_items.append(temp_dict)
+    return enriched_items
+

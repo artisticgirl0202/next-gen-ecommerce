@@ -204,8 +204,12 @@ export default function OrderDetailPage() {
   const fetchOrderFromApi = async (id: string) => {
     try {
       setLoading(true);
-      // 실제 API 엔드포인트에 맞춰 수정 (/api/orders/...)
-      const res = await fetch(`${API_BASE_URL}/api/orders/${id}`);
+
+      // ✅ 해결책: "ORD-RRL2070"에서 숫자만 추출하여 "2070"으로 만듭니다.
+      const numericId = id.replace(/[^0-9]/g, '');
+
+      // 수정된 numericId를 사용하여 호출
+      const res = await fetch(`${API_BASE_URL}/api/orders/${numericId}`);
 
       if (!res.ok) throw new Error('주문을 불러올 수 없습니다.');
 
