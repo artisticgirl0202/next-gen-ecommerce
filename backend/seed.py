@@ -1,10 +1,14 @@
 import json
 import psycopg2
-from psycopg2.extras import Json
+from psycopg2.extras import Json, execute_values
 import os
 import time
 from dotenv import load_dotenv
 
+load_dotenv()
+
+DB_URL = os.environ.get("DATABASE_URL")
+JSON_PATH = r"E:\websiteportfolio\next-gen-ecommerce\next-gen-ecommerce\backend\data\products.json"
 load_dotenv()
 
 def get_db_connection():

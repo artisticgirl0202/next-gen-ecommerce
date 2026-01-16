@@ -6,7 +6,7 @@ from backend.db.deps import get_db
 from backend.schemas.order import OrderCreate, OrderResponse
 from backend.services.order_service import create_order
 from backend.models.order import Order as OrderModel
-from typing import List, Any
+from typing import List, Any, Union
 import asyncio
 from backend.services.kafka_events import publish_order_created
 

@@ -36,6 +36,7 @@ def list_products(
 
     # 1. Redis에서 데이터 조회 시도
     try:
+        # 캐시 키 이름 (구분을 위해 products:list로 변경 권장하거나 기존 유지)
         raw_items = r.lrange("items:list", 0, -1) if r else []
         if raw_items and len(raw_items) > 0:
             print("🚀 [Cache Hit] Using data from Redis")
@@ -49,20 +50,21 @@ def list_products(
     if not items:
         print("🔍 [Cache Miss] Fetching directly from PostgreSQL...")
         try:
-            # SQL 직접 실행 (테이블명 'products' 확인 필수)
-            query = text("SELECT id, name, price, category, image, description FROM products")
+            # [수정됨] specs와 reviews 컬럼도 같이 조회합니다.
+            query = text("SELECT id, name, price, category, image, description, specs, reviews FROM products")
             result = db.execute(query)
             rows = result.fetchall()
 
             for row in rows:
-                # SQLAlchemy row 객체 접근 안전하게 처리
                 product_dict = {
                     "id": row[0],
                     "name": row[1],
                     "price": float(row[2]) if row[2] else 0,
                     "category": row[3],
-                    "image": row[4],
-                    "description": row[5]
+                    "image": row[4],       # DB 컬럼명 image와 일치 (굿!)
+                    "description": row[5],
+                    "specs": row[6],       # [추가됨] JSONB 데이터는 파이썬 딕셔너리로 자동 변환됨
+                    "reviews": row[7]      # [추가됨]
                 }
                 items.append(product_dict)
 
@@ -71,7 +73,8 @@ def list_products(
             # 3. 가져온 데이터를 Redis에 캐싱 (성공했을 때만)
             if items and r:
                 try:
-                    r.delete("items:list") # 기존 잘못된 캐시가 있을 수 있으므로 초기화
+                    # 기존 캐시가 있다면 포맷이 다를 수 있으니 삭제 후 재생성
+                    r.delete("items:list")
                     json_strings = [json.dumps(item) for item in items]
                     r.rpush("items:list", *json_strings)
                     r.expire("items:list", 3600) # 1시간 유지
