@@ -125,9 +125,5 @@ logs/
 *.log
 
 # Scratch / temp files
-POST
-find
-git
-rg
-queryex
 .env
+leak_report.json

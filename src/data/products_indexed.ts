@@ -1,6 +1,11 @@
 // src/data/products_indexed.ts
 import { CATEGORY_PRODUCTS as BASE_PRODUCTS } from './categoryData';
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(
+  /\/$/,
+  '',
+);
+
 export type ProductLike = {
   id?: number;
   name?: string;
@@ -88,10 +93,13 @@ updateProductIndexes([]);
 
 // 백엔드 동기화 (Client-side 전용)
 if (typeof window !== 'undefined') {
-  fetch('http://localhost:8000/api/products/')
+  // ✅ [수정 1] 작은따옴표(')를 백틱(`)으로 변경하여 변수가 올바르게 인식되도록 수정
+  fetch(`${API_BASE_URL}/api/products/`)
     .then((res) => res.json())
     .then((data) => {
-      updateProductIndexes(data.items || []);
+      // 백엔드가 { items: [...] } 형태로 준다고 가정
+      const items = data.items || data.products || [];
+      updateProductIndexes(items);
     })
     .catch((err) => console.error('백엔드 연결 실패:', err));
 }
@@ -103,21 +111,26 @@ export function getProductById(id: any) {
 
 export function getProductsByCategory(category = 'All', options?: any) {
   const idSet = PRODUCTS_BY_CATEGORY.get(category) || new Set<number>();
-  const items = Array.from(idSet)
+
+  // ✅ [수정 2] const를 let으로 변경 (아래에서 slice로 재할당하기 위함)
+  let items = Array.from(idSet)
     .map((id) => PRODUCTS_BY_ID.get(id))
     .filter(Boolean) as ProductLike[];
 
   // 간단한 페이징/정렬 처리 (옵션이 들어올 경우)
   if (options) {
-    // 필요하다면 여기서 sortDir, sortBy 처리 가능
-    // ✅ [수정] page, perPage 변수 선언도 주석 처리하여 'Unused' 에러 해결
-    // const { page = 1, perPage = 20 } = options;
-    // const start = (Number(page) - 1) * Number(perPage);
-    // const end = start + Number(perPage);
-    // items = items.slice(start, end);
+    const { page = 1, perPage = 20 } = options;
+    const start = (Number(page) - 1) * Number(perPage);
+    const end = start + Number(perPage);
+
+    // items 배열을 잘라서 해당 페이지 분량만 보여줍니다.
+    if (items.length > 0) {
+      items = items.slice(start, end);
+    }
   }
 
-  return { items, total: items.length };
+  // total은 전체 개수(idSet.size)를 반환하는 것이 더 정확합니다.
+  return { items, total: idSet.size };
 }
 
 export function searchProducts(q: string, _options?: any) {
