@@ -3,18 +3,27 @@ import psycopg2
 from psycopg2.extras import Json
 import os
 import time
-
+from dotenv import load_dotenv
+load_dotenv()
 # 1. DB 연결 설정 (수정됨: 환경 변수 우선 사용)
 def get_db_connection():
     max_retries = 5
 
-    # Docker 환경 변수를 먼저 읽고, 없으면 기본값(하드코딩)을 사용합니다.
-    # 이렇게 하면 로컬과 도커 환경 모두에서 유연하게 작동합니다.
-    db_host = os.environ.get("POSTGRES_HOST", "postgres") # 도커 내부 기본값
-    db_port = os.environ.get("POSTGRES_PORT", "5432")
-    db_name = os.environ.get("POSTGRES_DB", "appdb")
-    db_user = os.environ.get("POSTGRES_USER", "app")
-    db_password = os.environ.get("POSTGRES_PASSWORD", "strong-password")
+    # 이제 괄호 안에 기본값이 없습니다!
+    # 무조건 환경 변수(.env 혹은 Render 설정)에서 값을 가져옵니다.
+    db_host = os.environ.get("POSTGRES_HOST")
+    db_port = os.environ.get("POSTGRES_PORT")
+    db_name = os.environ.get("POSTGRES_DB")
+    db_user = os.environ.get("POSTGRES_USER")
+    db_password = os.environ.get("POSTGRES_PASSWORD")
+
+    # 값이 하나라도 없으면 에러를 띄웁니다 (안전장치)
+    if not all([db_host, db_port, db_name, db_user, db_password]):
+        print("❌ 환경 변수가 부족합니다. .env 파일을 확인하거나 Render 설정을 확인하세요.")
+        # 로컬 개발 편의를 위해 여기서 하드코딩된 값을 '임시로' 리턴하지 말고,
+        # 꼭 .env를 사용하도록 강제하는 것이 좋은 습관입니다.
+        raise Exception("Missing Environment Variables")
+
 
     print(f"📡 DB 연결 시도: {db_user}@{db_host}:{db_port}/{db_name}")
 
