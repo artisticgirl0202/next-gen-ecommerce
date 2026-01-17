@@ -1,62 +1,58 @@
 import json
 import psycopg2
-from psycopg2.extras import Json, execute_values
+from psycopg2.extras import Json
 import os
 import time
 from dotenv import load_dotenv
 
+# 1. 환경 변수 로드
 load_dotenv()
 
-DB_URL = os.environ.get("DATABASE_URL")
-JSON_PATH = r"E:\websiteportfolio\next-gen-ecommerce\next-gen-ecommerce\backend\data\products.json"
-load_dotenv()
+# 2. 설정: 여기에 정확한 파일 경로를 지정했습니다.
+# (Windows 경로이므로 앞에 r을 붙여 raw string으로 처리)
+TARGET_JSON_PATH = r"E:\websiteportfolio\next-gen-ecommerce\next-gen-ecommerce\backend\data\products.json"
 
 def get_db_connection():
     max_retries = 5
-
-    # 1. DATABASE_URL 환경 변수 하나만 가져옵니다.
     db_url = os.environ.get("DATABASE_URL")
-    print(f"DEBUG: URL Check -> {db_url}")
+
     if not db_url:
         print("❌ DATABASE_URL 환경 변수가 없습니다. .env 파일을 확인하세요.")
         raise Exception("Missing DATABASE_URL")
 
-    # Render 연결을 위해 sslmode=require가 없다면 강제로 붙여줍니다.
+    # Render 등 클라우드 DB 연결을 위한 SSL 모드 강제 설정
     if "sslmode" not in db_url:
         if "?" in db_url:
             db_url += "&sslmode=require"
         else:
             db_url += "?sslmode=require"
 
-    print(f"📡 Render DB 연결 시도 중...")
+    print(f"📡 Render DB 연결 시도 중... (URL 확인 완료)")
 
     for i in range(max_retries):
         try:
-            # 주소 전체를 한 번에 넣어서 연결
             conn = psycopg2.connect(db_url)
             return conn
         except psycopg2.OperationalError as e:
-            print(f"⚠️ 연결 실패 ({e}), 재시도 중... ({i+1}/{max_retries})")
-            time.sleep(3) # Render DB가 깨어날 시간을 위해 조금 더 기다림
+            print(f"⚠️ 연결 실패, 재시도 중... ({i+1}/{max_retries}) - {e}")
+            time.sleep(3)
 
-    raise Exception("❌ DB 연결 실패! 주소나 네트워크를 확인하세요.")
+    raise Exception("❌ DB 연결 실패! 네트워크 상태나 방화벽을 확인하세요.")
 
-# 메인 로직 시작
+# --- 메인 로직 ---
 try:
+    # 1. DB 연결
     conn = get_db_connection()
     cur = conn.cursor()
     print("✅ DB 연결 성공!")
 
-    # ---------------------------------------------------------
-    # [핵심] 기존 테이블 무조건 삭제 (DROP)
-    # 이 부분이 있어야 컬럼 이름이 'image_url'에서 'image'로 바뀝니다.
-    # ---------------------------------------------------------
-    print("🗑️ 구버전 테이블 삭제 중...")
+    # 2. 테이블 초기화 (DROP & CREATE)
+    print("🗑️ 기존 테이블 삭제 중...")
     cur.execute("DROP TABLE IF EXISTS products;")
     conn.commit()
 
-    # 2. 테이블 새로 생성 (image 컬럼으로 생성됨)
     print("🛠️ 새 테이블 생성 중...")
+    # specs와 reviews는 JSONB 타입으로 유연하게 저장
     cur.execute("""
         CREATE TABLE products (
             id TEXT PRIMARY KEY,
@@ -71,63 +67,78 @@ try:
         );
     """)
     conn.commit()
-    print("✅ 'products' 테이블이 image 컬럼으로 재생성되었습니다.")
+    print("✅ 'products' 테이블 생성 완료.")
 
 except Exception as e:
-    print(f"❌ 초기 설정 에러: {e}")
+    print(f"❌ 초기 DB 설정 에러: {e}")
+    if 'conn' in locals() and conn: conn.close()
     exit()
 
-# 3. JSON 파일 경로 (경로 문제 방지를 위해 두 곳 다 확인)
-possible_paths = [
-    os.path.join(os.path.dirname(__file__), 'data/products.json'),
-    os.path.join(os.path.dirname(__file__), '../src/data/demo_products_500.json')
+# 3. JSON 파일 읽기 (경로 우선순위 적용)
+products = None
+
+# 사용자가 지정한 경로를 최우선으로 확인
+check_paths = [
+    TARGET_JSON_PATH,
+    os.path.join(os.path.dirname(__file__), 'data', 'products.json'),
+    './data/products.json'
 ]
 
-products = None
-for path in possible_paths:
+for path in check_paths:
+    print(f"🔍 파일 찾는 중: {path}")
     if os.path.exists(path):
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 products = json.load(f)
-                print(f"📂 파일 로드 성공: {path}")
+                print(f"📂 파일 로드 성공! ({path})")
                 break
         except Exception as e:
-            print(f"⚠️ 파일 읽기 실패 ({path}): {e}")
+            print(f"⚠️ 파일은 찾았으나 읽기 실패: {e}")
+    else:
+        print("   -> 파일 없음")
 
 if products is None:
-    print("❌ JSON 파일을 찾을 수 없습니다. 경로를 확인해주세요.")
+    print(f"❌ 오류: 다음 경로들에서 products.json을 찾을 수 없습니다.\n{check_paths}")
+    if 'conn' in locals() and conn: conn.close()
     exit()
 
 # 4. 데이터 삽입
 try:
     print(f"🚀 {len(products)}개 데이터 삽입 시작...")
 
+    success_count = 0
     for p in products:
-        cur.execute(
-            """
-            INSERT INTO products (id, name, brand, category, description, price, image, specs, reviews)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO NOTHING
-            """,
-            (
-                str(p.get('id')),
-                p.get('name'),
-                p.get('brand', 'Generic'),
-                p.get('category'),
-                p.get('description'),
-                p.get('price'),
-                p.get('image'),   # 이제 에러 안 남
-                Json(p.get('specs', {})),
-                Json(p.get('reviews', []))
+        try:
+            cur.execute(
+                """
+                INSERT INTO products (id, name, brand, category, description, price, image, specs, reviews)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO NOTHING
+                """,
+                (
+                    str(p.get('id')), # ID는 문자열로 변환하여 저장
+                    p.get('name'),
+                    p.get('brand', 'Generic'),
+                    p.get('category'),
+                    p.get('description'),
+                    p.get('price'),
+                    p.get('image'),
+                    Json(p.get('specs', {})),   # 딕셔너리를 JSON으로 변환
+                    Json(p.get('reviews', []))  # 리스트를 JSON으로 변환
+                )
             )
-        )
+            success_count += 1
+        except Exception as insert_err:
+            print(f"⚠️ 상품 ID {p.get('id')} 삽입 실패: {insert_err}")
 
     conn.commit()
-    print(f"🎉 대성공! {len(products)}개의 상품 데이터가 DB에 저장되었습니다.")
+    print(f"🎉 작업 완료! 총 {success_count}개의 상품이 Render DB에 저장되었습니다.")
 
 except Exception as e:
     conn.rollback()
-    print(f"❌ 데이터 삽입 중 에러 발생: {e}")
+    print(f"❌ 데이터 삽입 중 치명적 에러: {e}")
+
 finally:
     if cur: cur.close()
     if conn: conn.close()
+    print("🔌 DB 연결 종료")
