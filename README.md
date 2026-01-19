@@ -136,6 +136,31 @@ Notes:
 
 ---
 
+## Environment Variables
+
+### 프론트엔드 (Vercel)
+
+**필수 환경 변수:**
+- `VITE_API_BASE_URL`: 백엔드 API URL (예: `https://nextgen-backend-ddbz.onrender.com`)
+
+설정 방법:
+1. Vercel 대시보드 → 프로젝트 → Settings → Environment Variables
+2. `VITE_API_BASE_URL` 추가하고 백엔드 URL 입력
+3. 배포 재실행
+
+### 백엔드 (Render)
+
+**필수 환경 변수:**
+- `FRONT_ORIGINS`: 프론트엔드 도메인 (쉼표로 구분)
+  - 예: `https://your-app.vercel.app,http://localhost:5173,http://localhost:4173`
+
+설정 방법:
+1. Render 대시보드 → 백엔드 서비스 → Environment
+2. `FRONT_ORIGINS` 추가하고 프론트엔드 도메인 입력
+3. 자동 재배포
+
+**중요:** CORS 오류가 발생하면 `FRONT_ORIGINS`에 Vercel 도메인이 포함되어 있는지 확인하세요.
+
 ## How to use this repository (quick start)
 
 1. Start services:

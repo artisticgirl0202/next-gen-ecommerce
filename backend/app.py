@@ -39,12 +39,17 @@ raw_origins = os.getenv(
 )
 FRONT_ORIGINS = [o.strip() for o in raw_origins.split(",") if o.strip()]
 
+# CORS 설정 로깅
+logger.info(f"🌐 CORS allowed origins: {FRONT_ORIGINS}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=FRONT_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 @app.on_event("startup")
