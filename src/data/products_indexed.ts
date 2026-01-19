@@ -44,10 +44,10 @@ export const updateProductIndexes = (newProducts: ProductLike[]) => {
   const idMap = new Map<string | number, ProductLike>();
 
   // 1) 기본 데이터와 백엔드 데이터 병합 (중복 시 백엔드 우선)
-  const combined = [
-    ...(Array.isArray(BASE_PRODUCTS) ? BASE_PRODUCTS : []),
-    ...newProducts,
-  ];
+const combined =
+    newProducts.length > 0
+      ? newProducts
+      : (Array.isArray(BASE_PRODUCTS) ? BASE_PRODUCTS : []);
 
   for (const p of combined) {
     if (p && p.id !== undefined) {

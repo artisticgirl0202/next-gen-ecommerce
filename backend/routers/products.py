@@ -27,7 +27,7 @@ except Exception as e:
 @router.get("/", summary="List products (Redis with DB Fallback)")
 def list_products(
     page: int = Query(1, ge=1),
-    page_size: int = Query(12, ge=1, le=200),
+    page_size: int = Query(600, ge=1, le=1000),
     db: Session = Depends(get_db)
 ) -> dict[str, Any]:
 

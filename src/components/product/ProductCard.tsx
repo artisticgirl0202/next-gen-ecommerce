@@ -233,6 +233,15 @@ export default function ProductCard({
           src={product.image}
           alt={displayName}
           loading="lazy"
+          onError={(e) => {
+    const target = e.target as HTMLImageElement;
+    // 무한 루프 방지 (대체 이미지도 깨져있을 경우를 대비)
+    target.onerror = null;
+    // 대체 이미지 경로 설정 (public 폴더에 placeholder.png가 있다고 가정)
+    target.src = '/assets/placeholder-image.png';
+    // 혹은 온라인 더미 이미지 사용
+    // target.src = 'https://via.placeholder.com/300x200?text=No+Image';
+  }}
           className={`
             w-full h-full transition-transform duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]
             group-hover:scale-105
