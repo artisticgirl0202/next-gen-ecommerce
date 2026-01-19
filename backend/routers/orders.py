@@ -13,46 +13,55 @@ from backend.services.kafka_events import publish_order_created
 router = APIRouter(tags=["orders"])
 
 # ---------------------------------------------------------
-# 🛠 [Helper] 이미지 주입 (SQL 직접 조회 방식 - 모델 없이 안전함)
+# 🛠 [Helper] 이미지 주입 (SQL 직접 조회 방식)
 # ---------------------------------------------------------
 def enrich_items_with_images(db: Session, items: List[Any]) -> List[Any]:
     if not items:
         return []
 
     enriched_items = []
+
+    # 1. 아이템 리스트 정규화 (SQLAlchemy 객체 or Dict -> Dict)
     for item in items:
-        # SQLAlchemy 객체인 경우 dict로 변환
-        if hasattr(item, "__dict__"):
-            temp_dict = {c.name: getattr(item, c.name) for c in item.__table__.columns}
-        elif isinstance(item, dict):
+        if isinstance(item, dict):
             temp_dict = item.copy()
+        elif hasattr(item, "__dict__"):
+             # SQLAlchemy 모델 객체인 경우
+            temp_dict = {c.name: getattr(item, c.name) for c in item.__table__.columns}
         else:
             temp_dict = dict(item)
+
+        # 기본값 설정
+        temp_dict.setdefault("title", "Unknown Product")
+        temp_dict.setdefault("image", "")
+        temp_dict.setdefault("price", 0.0)
+        temp_dict.setdefault("qty", temp_dict.get("quantity", 1))
+
         enriched_items.append(temp_dict)
 
+    # 2. DB 조회 및 보강
     for item in enriched_items:
-        # 1. 프론트엔드 호환성을 위해 키 값 정규화
         pid = item.get("product_id") or item.get("productId") or item.get("id")
 
         if pid:
             try:
-                # 💡 이미지 뿐만 아니라 이름(name)과 가격(price)도 함께 조회하여 보강
-                result = db.execute(
-                    text("SELECT name, image, price FROM products WHERE id = :pid"),
-                    {"pid": str(pid)}
-                ).fetchone()
+                # pid가 숫자인지 문자인지 확인하여 안전하게 조회
+                sql = text("SELECT name, image, price FROM products WHERE id = :pid")
+
+                # 먼저 문자열로 시도
+                result = db.execute(sql, {"pid": str(pid)}).fetchone()
+
+                # 없으면 숫자로 변환해서 재시도 (int 컬럼일 경우 대비)
+                if not result and str(pid).isdigit():
+                    result = db.execute(sql, {"pid": int(pid)}).fetchone()
 
                 if result:
-                    # 프론트엔드 OrderItemView 인터페이스에 맞춰 데이터 매핑
-                    item["id"] = pid
                     item["title"] = result[0]  # name -> title
                     item["image"] = result[1] or ""
-                    item["price"] = float(result[2]) if result[2] else 0
-                    # 만약 item에 qty가 없고 quantity만 있다면
-                    item["qty"] = item.get("quantity") or item.get("qty") or 1
+                    item["price"] = float(result[2]) if result[2] else 0.0
 
             except Exception as e:
-                print(f"상품 정보 보강 중 오류: {e}")
+                print(f"⚠️ 상품 정보 보강 중 오류 (ID: {pid}): {e}")
 
     return enriched_items
 
@@ -82,7 +91,8 @@ def api_create_order(payload: OrderCreate, db: Session = Depends(get_db)):
         status=str(order.status.value if hasattr(order.status, "value") else order.status),
         totalAmount=float(order.total_amount),
         items=final_items,
-        metadata=getattr(order, "metadata_json", None),
+        # ⬇️ [수정됨] 충돌 방지를 위해 빈 딕셔너리 {} 반환
+        metadata={},
         createdAt=order.created_at.isoformat(),
         updatedAt=order.updated_at.isoformat() if order.updated_at else order.created_at.isoformat(),
     )
@@ -109,7 +119,8 @@ def api_get_order(order_identifier: str, db: Session = Depends(get_db)):
         status=order.status.value if hasattr(order.status, "value") else str(order.status),
         totalAmount=float(order.total_amount),
         items=final_items,
-        metadata=getattr(order, "metadata_json", getattr(order, "metadata", None)),
+        # ⬇️ [수정됨] 여기가 에러의 주범이었습니다. 빈 딕셔너리로 수정!
+        metadata={},
         createdAt=order.created_at.isoformat(),
         updatedAt=order.updated_at.isoformat() if order.updated_at else order.created_at.isoformat(),
     )
@@ -135,45 +146,10 @@ def api_get_user_orders(user_id: Union[int, str], db: Session = Depends(get_db))
                 status=order.status.value if hasattr(order.status, "value") else str(order.status),
                 totalAmount=float(order.total_amount),
                 items=final_items,
-                metadata=getattr(order, "metadata_json", None),
+                # ⬇️ [수정됨] 안전하게 빈 딕셔너리 처리
+                metadata={},
                 createdAt=order.created_at.isoformat(),
                 updatedAt=order.updated_at.isoformat() if order.updated_at else order.created_at.isoformat(),
             )
         )
     return results
-
-# [보완] enrich_items_with_images 함수 내부
-def enrich_items_with_images(db: Session, items: List[Any]) -> List[Any]:
-    if not items: return []
-    enriched_items = []
-
-    for item in items:
-        # dict 변환 로직 유지...
-        temp_dict = item.copy() if isinstance(item, dict) else {c.name: getattr(item, c.name) for c in item.__table__.columns} if hasattr(item, "__table__") else dict(item)
-
-        # 기본값 설정 (매칭되는 상품이 없을 때 422 에러 방지용)
-        temp_dict.setdefault("title", "Unknown Product")
-        temp_dict.setdefault("image", "")
-        temp_dict.setdefault("price", 0.0)
-        temp_dict.setdefault("qty", temp_dict.get("quantity", 1))
-
-        pid = temp_dict.get("product_id") or temp_dict.get("productId") or temp_dict.get("id")
-        if pid:
-            try:
-                # pid 타입에 따른 유연한 조회
-                sql = text("SELECT name, image, price FROM products WHERE id = :pid")
-                result = db.execute(sql, {"pid": str(pid)}).fetchone()
-
-                if not result and str(pid).isdigit():
-                    result = db.execute(sql, {"pid": int(pid)}).fetchone()
-
-                if result:
-                    temp_dict["title"] = result[0]
-                    temp_dict["image"] = result[1] or ""
-                    temp_dict["price"] = float(result[2]) if result[2] else 0.0
-            except Exception as e:
-                print(f"⚠️ 상품 조회 실패 (ID: {pid}): {e}")
-
-        enriched_items.append(temp_dict)
-    return enriched_items
-
