@@ -1,7 +1,8 @@
 // src/api/products.ts
-const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
-
+import { API_BASE_URL } from '@/lib/api-config';
 import type { Product } from '@/types';
+
+const API_BASE = API_BASE_URL;
 
 export type ProductDto = {
   id: number;

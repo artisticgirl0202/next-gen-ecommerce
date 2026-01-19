@@ -1,9 +1,12 @@
 // src/api/integration.ts
+import { API_BASE_URL } from '@/lib/api-config';
 
-// ✅ [추가됨] 환경 변수에서 기본 URL을 가져옵니다.
-// 로컬 개발 시(.env가 없거나 비어있을 때)에는 빈 문자열('')이 되어 vite.config.ts의 프록시(/api)를 탑니다.
-// 배포 시(Vercel)에는 설정한 https://...onrender.com 주소가 들어갑니다.
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+// 환경 변수에서 기본 URL을 가져옵니다.
+// 로컬 개발 시(.env가 없거나 비어있을 때)에는 vite.config.ts의 프록시(/api)를 탑니다.
+// 배포 시(Vercel)에는 VITE_API_BASE_URL 환경 변수를 통해 백엔드 URL을 사용합니다.
+const BASE_URL = import.meta.env.DEV && !import.meta.env.VITE_API_BASE_URL
+  ? '' // 개발 환경에서 환경 변수 없으면 프록시 사용
+  : API_BASE_URL;
 
 // --- 1. Orders API Types ---
 export interface OrderItem {

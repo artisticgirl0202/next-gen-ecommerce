@@ -1,10 +1,6 @@
 // src/data/products_indexed.ts
 import { CATEGORY_PRODUCTS as BASE_PRODUCTS } from './categoryData';
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(
-  /\/$/,
-  '',
-);
+import { API_BASE_URL } from '@/lib/api-config';
 
 export type ProductLike = {
   id: number | string; // ID는 숫자와 문자열 모두 허용하도록 확장

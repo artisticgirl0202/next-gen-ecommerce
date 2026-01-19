@@ -136,30 +136,42 @@ Notes:
 
 ---
 
-## Environment Variables
+## Environment Variables Configuration
 
-### 프론트엔드 (Vercel)
+### 프론트엔드 (Frontend) - Vercel
 
 **필수 환경 변수:**
-- `VITE_API_BASE_URL`: 백엔드 API URL (예: `https://nextgen-backend-ddbz.onrender.com`)
+- `VITE_API_BASE_URL`: 백엔드 API 베이스 URL
+  - 예: `https://nextgen-backend-ddbz.onrender.com`
+  - ⚠️ **주의**: URL 끝에 슬래시(`/`)를 포함하지 마세요
 
-설정 방법:
-1. Vercel 대시보드 → 프로젝트 → Settings → Environment Variables
-2. `VITE_API_BASE_URL` 추가하고 백엔드 URL 입력
-3. 배포 재실행
+**설정 방법:**
+1. Vercel 대시보드 → 프로젝트 선택
+2. Settings → Environment Variables
+3. `VITE_API_BASE_URL` 추가하고 백엔드 URL 입력
+4. 배포 재실행
 
-### 백엔드 (Render)
+**보안:**
+- 프로덕션 환경에서는 환경 변수가 필수입니다
+- 환경 변수가 없으면 명확한 에러 메시지가 표시됩니다
+- 하드코딩된 URL은 코드에서 완전히 제거되었습니다
+
+### 백엔드 (Backend) - Render
 
 **필수 환경 변수:**
 - `FRONT_ORIGINS`: 프론트엔드 도메인 (쉼표로 구분)
   - 예: `https://your-app.vercel.app,http://localhost:5173,http://localhost:4173`
+  - Vercel 도메인을 반드시 포함해야 합니다
 
-설정 방법:
-1. Render 대시보드 → 백엔드 서비스 → Environment
-2. `FRONT_ORIGINS` 추가하고 프론트엔드 도메인 입력
-3. 자동 재배포
+**설정 방법:**
+1. Render 대시보드 → 백엔드 서비스 선택
+2. Environment → Add Environment Variable
+3. `FRONT_ORIGINS` 추가하고 프론트엔드 도메인 입력
+4. 자동 재배포
 
-**중요:** CORS 오류가 발생하면 `FRONT_ORIGINS`에 Vercel 도메인이 포함되어 있는지 확인하세요.
+**중요:**
+- CORS 오류가 발생하면 `FRONT_ORIGINS`에 Vercel 도메인이 포함되어 있는지 확인하세요
+- 백엔드 로그에서 `🌐 CORS allowed origins:` 메시지로 허용된 도메인을 확인할 수 있습니다
 
 ## How to use this repository (quick start)
 

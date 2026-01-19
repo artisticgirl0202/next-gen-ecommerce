@@ -9,9 +9,9 @@ export type Recommendation = Product & {
 };
 
 /** API_BASE: 환경변수 사용 */
-const API_BASE =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
-  'http://localhost:8000';
+import { API_BASE_URL } from '@/lib/api-config';
+
+const API_BASE = API_BASE_URL;
 
 /** * [수정] 로컬 파일 임포트를 사용하여 백엔드 실패 시 대체 데이터 제공
  * 백엔드 호출 실패 시 빈 결과를 반환하거나 에러를 던지도록 변경

@@ -28,6 +28,7 @@ import ProductCard from '@/components/product/ProductCard';
 import ProductDetailModal from '@/components/product/ProductDetailModal';
 
 import { getProductById } from '@/data/products_indexed';
+import { API_BASE_URL } from '@/lib/api-config';
 import type { Recommendation } from '@/types/recommendation';
 
 // --- Types ---
@@ -51,8 +52,6 @@ interface OrderDetail {
   shippingAddress?: string;
   paymentMethod?: string;
 }
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 // --- Constants & Mock Data ---
 const demoProductsRaw = [
   {

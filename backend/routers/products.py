@@ -94,6 +94,13 @@ def list_products(
     end = start + page_size
     page_items = items[start:end]
 
+    # 디버깅 로그 추가
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"📦 Products API: source={source}, total={total}, page={page}, page_size={page_size}, returning={len(page_items)} items")
+    if total == 0:
+        logger.warning("⚠️ No products found! Check Redis and database connection.")
+
     return {
         "items": page_items,
         "total": total,
