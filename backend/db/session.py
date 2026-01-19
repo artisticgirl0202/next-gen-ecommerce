@@ -1,20 +1,22 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from backend.db.base import Base
 
+# 환경변수 가져오기
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# [필수] Render 배포용 URL 수정 코드
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 if not DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL is not set. "
-        "Check backend/.env or deployment environment variables."
-    )
+    print("⚠️ DATABASE_URL 없음. 로컬 SQLite를 사용합니다.")
+    DATABASE_URL = "sqlite:///./sql_app.db"
 
 engine = create_engine(
     DATABASE_URL,
     future=True,
-    pool_pre_ping=True,   # 끊어진 커넥션 자동 감지
+    pool_pre_ping=True,
 )
 
 SessionLocal = sessionmaker(
@@ -23,6 +25,7 @@ SessionLocal = sessionmaker(
     bind=engine,
 )
 
+# get_db 함수가 여기에도 있을 수 있습니다.
 def get_db():
     db = SessionLocal()
     try:

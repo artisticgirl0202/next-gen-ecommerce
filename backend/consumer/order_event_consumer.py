@@ -1,40 +1,4 @@
-# import json
-# from kafka import KafkaConsumer
-# from sqlalchemy.orm import Session
 
-# from backend.db.session import SessionLocal
-# from backend.models.order_event import OrderEvent
-
-# consumer = KafkaConsumer(
-#     "order.events",
-#     bootstrap_servers="kafka:9092",
-#     value_deserializer=lambda m: json.loads(m.decode("utf-8")),
-#     group_id="order-event-consumers",
-#     auto_offset_reset="earliest",
-# )
-
-# def consume():
-#     for msg in consumer:
-#         data = msg.value
-#         payload = data["payload"]
-
-#         db: Session = SessionLocal()
-#         try:
-#             event = OrderEvent(
-#                 order_id=payload["orderId"],
-#                 event_type=data["type"],
-#                 payload=payload,
-#             )
-#             db.add(event)
-#             db.commit()
-#         except Exception:
-#             db.rollback()
-#             raise
-#         finally:
-#             db.close()
-
-# if __name__ == "__main__":
-#     consume()
 # backend/consumer/order_event_consumer.py
 import os, json, logging, time
 logger = logging.getLogger("order_consumer")
