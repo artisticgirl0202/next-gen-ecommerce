@@ -52,7 +52,12 @@ export default function ProductDetailModal({
   const userId = (user as any)?.id ?? 0;
   const addItem = useCart((state) => state.addItem);
   const navigate = useNavigate();
-
+  useEffect(() => {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }, []);
   // 헬퍼: 추천 데이터 없을 시 로컬 데이터 사용
   const getFallbackRecommendations = (): Recommendation[] => {
     if (!allDemoProducts || allDemoProducts.length === 0) return [];
