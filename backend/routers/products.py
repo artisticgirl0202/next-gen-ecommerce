@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, Depends
+from fastapi import APIRouter, Query, Depends, HTTPException
 from typing import Any, List
 import redis, os, json
 from sqlalchemy.orm import Session
@@ -85,8 +85,10 @@ def list_products(
             source = "database"
 
         except Exception as e:
-            print(f"🚨 [DB Error] 데이터 조회 실패: {e}")
-            items = []
+            error_msg = f"Database Error: {str(e)}"
+            print(f"🚨 {error_msg}")
+            # items = []
+            raise HTTPException(status_code=500, detail=f"Database Connection Error: {str(e)}")
 
     # 4. 페이징 처리
     total = len(items)
