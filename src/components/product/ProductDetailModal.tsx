@@ -426,12 +426,14 @@ export default function ProductDetailModal({
             ) : (
               <div
                 ref={recsScrollRef}
-                className="flex gap-6 overflow-x-auto no-scrollbar py-6 px-1 p-4 sm:p-6 scroll-smooth"
+               className="flex gap-6 overflow-x-auto pb-8 px-8 snap-x
+              [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]
+              [mask-image:linear-gradient(to_right,transparent,black_0.2%,black_99.8%,transparent)]"
               >
                 {recommendations?.map((r) => (
                   <div
                     key={r.id}
-                    className="w-56 shrink-0 relative p-4 flex flex-col bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-md rounded-3xl border border-white/10 hover:border-cyan-500/40 hover:bg-slate-800/60 hover:shadow-[0_0_30px_-10px_rgba(6,182,212,0.3)] transition-all duration-500 ease-out group"
+                    className="w-56 shrink-0 relative p-4 flex flex-col snap-center bg-gradient-to-br from-slate-900/80 to-slate-900/40 backdrop-blur-md rounded-3xl border border-white/10 hover:border-cyan-500/40 hover:bg-slate-800/60 hover:shadow-[0_0_30px_-10px_rgba(6,182,212,0.3)] transition-all duration-500 ease-out group"
                   >
                     <div className="flex-1 mb-3">
                       <div className="mb-3 flex justify-between items-start">
