@@ -180,7 +180,10 @@ const getTranslatedReason = (text: string) => {
 
 // --- Main Component ---
 export default function OrderDetailPage() {
-  // ✅ [수정] Hooks 선언 순서 정리 (최상단 배치)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const navigate = useNavigate();
   const { orderId } = useParams<{ orderId: string }>();
   const idStr = orderId;

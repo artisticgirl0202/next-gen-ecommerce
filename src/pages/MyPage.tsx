@@ -46,6 +46,10 @@ export default function MyPage({ currentUser }: MyPageProps) {
   const { login, getCurrentUser } = useUserStore();
   const setOrder = useOrderStore((s) => s.setOrder);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const sliderRef = useRef<HTMLDivElement | null>(null);
 

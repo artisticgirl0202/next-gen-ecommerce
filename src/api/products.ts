@@ -38,6 +38,11 @@ export async function fetchProductsPage(page = 1, pageSize = 12) {
 }
 
 function mapDtoToProduct(d: ProductDto): Product {
+  const categoryValue =
+    Array.isArray(d.categories) && d.categories.length > 0
+      ? d.categories[0]
+      : (d as any).category;
+
   return {
     id: Number(d.id) || 0,
     name: String(d.name ?? ''),
@@ -47,10 +52,7 @@ function mapDtoToProduct(d: ProductDto): Product {
     rating: typeof d.rating === 'number' ? d.rating : undefined,
     description: typeof d.description === 'string' ? d.description : undefined,
     // Some sources provide a single `category` or a `categories` array — normalize to first category if available
-    category:
-      Array.isArray(d.categories) && d.categories.length > 0
-        ? d.categories[0]
-        : undefined,
+    category: categoryValue,
     categories: Array.isArray(d.categories) ? d.categories : undefined,
     connectivity:
       typeof d.specs?.connectivity === 'string'
@@ -68,5 +70,12 @@ export async function fetchProducts(page = 1, pageSize = 12) {
     : Array.isArray(json.items)
       ? json.items
       : [];
-  return arr.map(mapDtoToProduct);
+  const validProducts = arr
+    .filter(item => item && item.id !== undefined && item.name) //  빈 객체 및 필수 필드 누락 제거
+    .map(mapDtoToProduct)
+    .filter(p => p.id > 0 && p.name); //  ID가 0이거나 이름이 없는 것 제거
+
+  console.log(`📦 fetchProducts: 받은 ${arr.length}개 중 유효한 ${validProducts.length}개 처리`);
+
+  return validProducts;
 }

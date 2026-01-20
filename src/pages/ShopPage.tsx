@@ -1,6 +1,7 @@
 // 예: src/pages/ShopPage.tsx (또는 App.tsx의 메인 부분)
 import Header from "@/components/layout/Header";
 import ProductList from "@/components/product/ProductList";
+import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
 export default function ShopPage() {
@@ -15,6 +16,10 @@ export default function ShopPage() {
   // 브랜드는 콤마(,)로 구분된 문자열로 오므로 배열로 변환
   const brandParam = searchParams.get("brands");
   const activeBrands = brandParam ? brandParam.split(",") : [];
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">

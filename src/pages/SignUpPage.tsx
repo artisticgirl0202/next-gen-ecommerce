@@ -3,14 +3,18 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CheckCircle2, CircuitBoard, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function SignupPage() {
   const navigate = useNavigate();
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // ✅ 입력값 State 관리
+   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  //  입력값 State 관리
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -18,7 +22,7 @@ export default function SignupPage() {
     password: "",
   });
 
-  // ✅ 에러 메시지 State 관리
+  //  에러 메시지 State 관리
   const [errors, setErrors] = useState<{ [key: string]: string | null }>({
     name: null,
     phone: null,

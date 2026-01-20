@@ -1,14 +1,14 @@
 'use client';
 
 // ✅ [변경] 실시간 백엔드 데이터가 병합되는 통합 인덱스 파일을 가져옵니다.
-import { ALL_PRODUCTS } from '@/data/products_indexed';
+import { fetchProducts } from '@/api/products';
+import { ALL_PRODUCTS, updateProductIndexes } from '@/data/products_indexed';
 import type { Product } from '@/types';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import BentoCard from '../ui/BentoCard';
 import ProductDetailModal from './ProductDetailModal';
-
 // --- Types ---
 interface ProductListProps {
   category: string;
@@ -33,25 +33,72 @@ export default function ProductList({
 }: ProductListProps) {
   // --- State ---
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-
+  const [isLoading, setIsLoading] = useState(false);
+  const [productsKey, setProductsKey] = useState(0);
+  const [productsCount, setProductsCount] = useState(0);
   // 렌더링 성능을 위해 처음에 24개만 보여주고 스크롤 시 더 보여줌
   const [visibleCount, setVisibleCount] = useState<number>(24);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   // 카테고리나 필터 변경 시 스크롤 및 개수 초기화
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     Promise.resolve().then(() => setVisibleCount(24));
   }, [category, searchQuery, sortBy, brands]);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedProducts = await fetchProducts(1, 600);
+        if (fetchedProducts && fetchedProducts.length > 0) {
+          updateProductIndexes(fetchedProducts);
+          // ✅ 리렌더링 트리거
+          setProductsKey(prev => prev + 1);
+          setProductsCount(ALL_PRODUCTS.length);
+        }
+      } catch (error) {
+        console.error('❌ 상품 로드 실패:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, [category]);
+
+  useEffect(() => {
+      const interval = setInterval(() => {
+        if (ALL_PRODUCTS.length !== productsCount && ALL_PRODUCTS.length > 0) {
+          setProductsCount(ALL_PRODUCTS.length);
+          setProductsKey(prev => prev + 1);
+        }
+      }, 500);
+      return () => clearInterval(interval);
+    }, [productsCount]);
 
   // --- Logic: Filtering & Sorting ---
   const filteredProducts = useMemo(() => {
     // ✅ [변경] 백엔드 데이터가 포함된 실시간 통합 리스트를 복사하여 사용합니다.
     let list = [...ALL_PRODUCTS];
 
-    // 1. Category Filter
     const targetCategory = normalize(category);
+    console.log(`🔍 카테고리 필터링: target="${targetCategory}", 전체 상품 수=${list.length}`);
+
+
     if (targetCategory !== 'all') {
-      list = list.filter((p) => normalize(p.category) === targetCategory);
+      // ✅ [수정] beforeFilter 변수 추가
+      const beforeFilter = list.length;
+      list = list.filter((p) => {
+        const productCategory = normalize(p.category);
+        const matches = productCategory === targetCategory;
+        // ✅ 디버깅: 처음 몇 개만 로그 출력
+        if (list.indexOf(p) < 3) {
+          console.log(`  - 상품 "${p.name}": category="${p.category}" -> normalized="${productCategory}", matches=${matches}`);
+        }
+        return matches;
+      });
+      console.log(`  ✅ 필터링 결과: ${beforeFilter}개 -> ${list.length}개`);
     }
 
     // 2. Search Filter
@@ -83,7 +130,7 @@ export default function ProductList({
 
     return list;
     // ✅ [중요] ALL_PRODUCTS.length를 감지하여 백엔드 데이터 로드 완료 시 자동으로 목록을 갱신합니다.
-  }, [category, searchQuery, sortBy, brands, ALL_PRODUCTS.length]);
+  }, [category, searchQuery, sortBy, brands, productsKey]);
 
   // --- Pagination (Infinite Scroll) ---
   const displayedProducts = useMemo(() => {
@@ -244,7 +291,7 @@ export default function ProductList({
 
                     {/* Bottom Info / Action */}
                     <div
-                      className={`flex ${isList ? 'flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 md:min-w-[140px] md:border-l md:border-white/5 md:pl-8 mt-2 md:mt-0' : 'flex-col gap-2 mt-auto border-t border-white/5 pt-2 sm:pt-3 w-full'}`}
+                      className={`flex ${isList ? 'flex-row md:flex-col items-center md:items-center justify-between md:justify-center gap-4 md:min-w-[140px] md:border-l md:border-white/5 md:pl-8 mt-2 md:mt-0' : 'flex-col gap-2 mt-auto border-t border-white/5 pt-2 sm:pt-3 w-full'}`}
                     >
                       {!isList && (
                         <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 mb-1">
@@ -255,7 +302,7 @@ export default function ProductList({
                       )}
 
                       <div
-                        className={`${isList ? 'md:text-right' : 'flex items-center justify-between pb-4'}`}
+                        className={`${isList ? 'md:text-center' : 'text-center pb-4'}`}
                       >
                         <span
                           className={`font-black text-white tracking-tight ${isList ? 'text-xl md:text-2xl' : 'text-lg sm:text-2xl'}`}
@@ -295,7 +342,7 @@ export default function ProductList({
                         <span
                           className={`
                           relative z-10 font-black uppercase tracking-[0.2em] 
-                          text-cyan-400 group-hover/btn:text-cyan-200 transition-colors pt-0.5 flex items-center gap-2
+                          text-cyan-400 group-hover/btn:text-cyan-200 transition-colors flex items-center justify-center gap-2
                           ${isList ? 'text-[10px] sm:text-xs' : 'text-[10px] sm:text-sm'}
                         `}
                         >
@@ -318,7 +365,16 @@ export default function ProductList({
       {/* Loader */}
       {!limit && (
         <div className="flex flex-col items-center justify-center mt-12 mb-20 gap-4">
-          {hasMore ? (
+          {isLoading ? (
+            // ✅ 백엔드에서 상품을 불러오는 중일 때
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-cyan-500 font-mono text-xs animate-pulse tracking-widest">
+                LOADING PRODUCTS...
+              </span>
+            </div>
+          ) : hasMore ? (
+            // ✅ 더 불러올 상품이 있을 때 (기존 무한 스크롤 로딩)
             <div className="flex flex-col items-center gap-2">
               <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
               <span className="text-cyan-500 font-mono text-xs animate-pulse tracking-widest">
@@ -326,6 +382,7 @@ export default function ProductList({
               </span>
             </div>
           ) : (
+            // ✅ 모든 상품을 불러왔을 때
             <div className="text-slate-600 text-xs font-mono uppercase tracking-widest opacity-50">
               // END OF STREAM //
             </div>

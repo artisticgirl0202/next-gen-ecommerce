@@ -1,6 +1,7 @@
 'use client';
 
 import { sendAIFeedbackAPI } from '@/api/integration';
+import { API_BASE_URL } from '@/lib/api-config';
 import { useCart } from '@/store/cartStore';
 import { useUserStore } from '@/store/userStore';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -20,9 +21,8 @@ import {
   User,
   Zap,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '@/lib/api-config';
 // [✨ 병합 포인트 1] 커스텀 에러 메시지 컴포넌트
 const ValidationAlert = ({
   message,
@@ -62,6 +62,10 @@ const ValidationAlert = ({
 // makeOrderId 함수는 이제 백엔드 ID를 쓰므로 필요 없어서 제거했습니다.
 
 export default function CheckoutPage() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const navigate = useNavigate();
   const { items, removeItem, updateQty } = useCart();
   const { addOrder, getCurrentUser } = useUserStore();

@@ -2,10 +2,17 @@
 
 import { motion } from 'framer-motion';
 import { ArrowLeft, ShieldCheck, User, UserPlus, Zap } from 'lucide-react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function CheckoutGatewayPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+
 
   return (
     <div className="min-h-screen text-slate-200 selection:bg-cyan-500/30 relative font-sans bg-slate-950 flex flex-col">
@@ -15,7 +22,7 @@ export default function CheckoutGatewayPage() {
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14 relative z-10 w-full flex-1 flex flex-col">
         {/* HEADER SECTION (CartPage와 통일감 유지) */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 sm:mb-12 lg:mb-16">
+        <header className="">
           <div className="flex items-start gap-4 sm:gap-6">
             <button
               onClick={() => navigate(-1)}

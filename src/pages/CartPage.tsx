@@ -13,11 +13,16 @@ import {
   Trash2,
   Zap,
 } from 'lucide-react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function CartPage({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
   const { items, updateQty, removeItem } = useCart();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   // Calculations
   const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
