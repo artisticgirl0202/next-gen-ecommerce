@@ -18,7 +18,9 @@ from backend.services.kafka_producer import get_producer, stop_producer
 
 # DB 임포트
 from backend.db import Base, engine
-
+#Seeding Endpoint
+from backend.db import engine
+from sqlalchemy import text
 # 주문(Orders) 라우터 안전하게 임포트
 try:
     from backend.routers.orders import router as orders_router
@@ -77,6 +79,30 @@ async def shutdown_event():
     if ENABLE_KAFKA:
         await stop_producer()
         logger.info("🛑 Kafka producer stopped")
+
+@app.get("/api/seed")
+def seed_database():
+    try:
+        with engine.connect() as conn:
+            # 1. 기존 데이터 싹 지우기 (초기화)
+            conn.execute(text("TRUNCATE TABLE products RESTART IDENTITY CASCADE;"))
+
+            # 2. 데이터 새로 넣기
+            insert_query = text("""
+                INSERT INTO products (name, price, category, image, description, specs, reviews) VALUES 
+                ('Quantum Blade Laptop', 1299.00, 'Computing Devices', '/images/products/laptop-1.jpg', 'Next-generation processing power.', '{"cpu": "i9", "ram": "32GB"}', 4.8),
+                ('Neural Link Watch', 399.00, 'Mobile & Wearables', '/images/products/watch-1.jpg', 'Advanced biometric tracking.', '{"battery": "48h", "waterproof": "5ATM"}', 4.5),
+                ('Sonic Echo Pods', 199.00, 'Audio Devices', '/images/products/earbuds-1.jpg', 'Lossless spatial audio.', '{"noise_cancel": "active", "playtime": "24h"}', 4.6),
+                ('OLED Curve 8K', 2499.00, 'Video & Display', '/images/products/tv-1.jpg', 'Ultra-thin 8K OLED display.', '{"size": "65inch", "refresh": "120Hz"}', 4.9),
+                ('Alpha Lens Z9', 1899.00, 'Cameras & Imaging', '/images/products/camera-1.jpg', 'Full-frame mirrorless camera.', '{"sensor": "50MP", "video": "8K"}', 4.7)
+            """)
+            conn.execute(insert_query)
+            conn.commit()
+
+        return {"message": "✅ 데이터 초기화 성공! 이제 메인 화면을 새로고침 해보세요."}
+
+    except Exception as e:
+        return {"error": f"🚨 초기화 실패: {str(e)}"}
 
 # 라우터 등록
 app.include_router(health_router, prefix="/health", tags=["health"])
