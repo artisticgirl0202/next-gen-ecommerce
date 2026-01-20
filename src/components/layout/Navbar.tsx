@@ -4,7 +4,7 @@
 import { useAuth } from '@/store/authStore';
 import { useCart } from '@/store/cartStore';
 import { AnimatePresence, motion } from 'framer-motion';
-import { LogOut, Search, ShoppingCart, X, Zap } from 'lucide-react';
+import { LogOut, Search, ShoppingCart, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 
 // 화면 크기 감지 훅
@@ -87,10 +87,10 @@ const Navbar: React.FC<Props> = ({
         }}
       >
         <div className="w-10 h-10 bg-cyan-400/80 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.4)] group-hover:rotate-12 transition-transform cursor-pointer">
-          <Zap
-            className="text-white cursor-pointer"
-            size={24}
-            fill="currentColor"
+          <img
+            src="/logo.png"
+            alt="TECH.CO Logo"
+            className="w-full h-full object-contain"
           />
         </div>
         <h1 className="text-xl font-black tracking-tighter text-white hidden sm:block italic cursor-pointer">
