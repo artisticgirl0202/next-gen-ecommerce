@@ -255,7 +255,7 @@ export default function ProductList({
                       )}
 
                       <div
-                        className={`${isList ? 'md:text-right' : 'flex items-center justify-between'}`}
+                        className={`${isList ? 'md:text-right' : 'flex items-center justify-between pb-4'}`}
                       >
                         <span
                           className={`font-black text-white tracking-tight ${isList ? 'text-xl md:text-2xl' : 'text-lg sm:text-2xl'}`}
@@ -270,34 +270,34 @@ export default function ProductList({
                           handleProductClick(product);
                         }}
                         className={`
-    relative group/btn overflow-hidden rounded-xl
-    
-    /* 1. 배경 & 테두리 (Future Tech Style) */
-    bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
-    border border-cyan-500/20
-    
-    /* 2. 호버 효과 (Glow & Lighten) */
-    hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
-    focus:outline-none transition-all duration-300
-    
-    /* 3. 기본 레이아웃 */
-    flex items-center justify-center cursor-pointer
-    
-    /* 4. 조건부 크기 (기존 로직 유지 + 반응형 보완) */
-    ${
-      isList
-        ? 'px-6 py-2 md:py-3 md:w-full' // 리스트 뷰: 버튼 크기 최적화
-        : 'w-full py-2 sm:py-3' // 그리드 뷰: 꽉 찬 너비
-    }
-  `}
+                        relative group/btn overflow-hidden rounded-xl
+                        
+                        /* 1. 배경 & 테두리 (Future Tech Style) */
+                        bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
+                        border border-cyan-500/20
+                        
+                        /* 2. 호버 효과 (Glow & Lighten) */
+                        hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
+                        focus:outline-none transition-all duration-300
+                        
+                        /* 3. 기본 레이아웃 */
+                        flex items-center justify-center cursor-pointer
+                        
+                        /* 4. 조건부 크기 (기존 로직 유지 + 반응형 보완) */
+                        ${
+                          isList
+                            ? 'px-6 py-2 md:py-3 md:w-full' // 리스트 뷰: 버튼 크기 최적화
+                            : 'w-full py-2 sm:py-3' // 그리드 뷰: 꽉 찬 너비
+                        }
+                      `}
                       >
                         {/* 텍스트 컨텐츠 */}
                         <span
                           className={`
-      relative z-10 font-black uppercase tracking-[0.2em] 
-      text-cyan-400 group-hover/btn:text-cyan-200 transition-colors pt-0.5 flex items-center gap-2
-      ${isList ? 'text-[10px] sm:text-xs' : 'text-[10px] sm:text-sm'}
-    `}
+                          relative z-10 font-black uppercase tracking-[0.2em] 
+                          text-cyan-400 group-hover/btn:text-cyan-200 transition-colors pt-0.5 flex items-center gap-2
+                          ${isList ? 'text-[10px] sm:text-xs' : 'text-[10px] sm:text-sm'}
+                        `}
                         >
                           Access
                         </span>
