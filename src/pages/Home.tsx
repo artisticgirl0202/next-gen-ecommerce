@@ -241,9 +241,10 @@ function LandingView({ handleCategoryChange, viewMode }: { handleCategoryChange:
 
   <p
     className="
-      relative z-20
-      text-4xl sm:text-5xl md:text-7xl lg:text-8xl
-      font-black italic text-white tracking-tighter uppercase leading-[0.9]
+      font-display relative z-20
+      w-full max-w-[14ch] text-wrap break-words
+      text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl
+      font-black italic text-white tracking-tighter uppercase leading-[0.95]
       will-change-transform
     "
     style={{
@@ -358,11 +359,11 @@ function LandingView({ handleCategoryChange, viewMode }: { handleCategoryChange:
 
                 <div className="w-fit md:w-auto self-end md:self-auto">
                   <div className="flex flex-nowrap items-center gap-x-3 md:gap-x-8 bg-slate-900/80 border border-cyan-500/30 md:border-white/10 px-3 py-2 md:px-6 md:py-3 rounded md:rounded-xl backdrop-blur-md shadow-lg justify-start">
-                    <div className="flex flex-col items-start gap-0.5 group cursor-default">
+                    <div className="flex flex-col items-center text-center gap-0.5 group cursor-default">
                       <span className="text-[8px] sm:text-[10px] text-slate-500 font-mono uppercase tracking-widest group-hover:text-cyan-400 transition-colors whitespace-nowrap">
                         Algorithm
                       </span>
-                      <span className="text-[10px] sm:text-sm text-white font-bold uppercase tracking-tight flex items-center gap-1.5 whitespace-nowrap">
+                      <span className="text-[10px] sm:text-sm text-white font-bold uppercase tracking-tight flex items-center justify-center gap-1.5 whitespace-nowrap">
                         <div className="w-1 h-1 bg-cyan-500 rounded-full shrink-0 shadow-[0_0_5px_rgba(6,182,212,0.8)]" />
                         {sortBy.replace('_', ' ')}
                       </span>
@@ -370,13 +371,13 @@ function LandingView({ handleCategoryChange, viewMode }: { handleCategoryChange:
 
                     <div className="w-[1px] h-5 md:h-6 bg-white/10 shrink-0" />
 
-                    <div className="flex flex-col items-start gap-0.5 group cursor-default">
+                    <div className="flex flex-col items-start text-center gap-0.5 group cursor-default">
                       <span className="text-[8px] sm:text-[10px] text-slate-500 font-mono uppercase tracking-widest group-hover:text-cyan-400 transition-colors whitespace-nowrap">
                         Interface
                       </span>
-                      <span className="text-[10px] sm:text-sm text-white font-bold uppercase tracking-tight flex items-center gap-1.5 whitespace-nowrap">
-                          <div className="w-1 h-1 bg-cyan-500 rounded-full shrink-0 shadow-[0_0_5px_rgba(6,182,212,0.8)]" />
-                          {viewMode}
+                      <span className="text-[10px] sm:text-sm text-white font-bold uppercase tracking-tight flex items-center justify-center gap-1.5 whitespace-nowrap">
+                        <div className="w-1 h-1 bg-cyan-500 rounded-full shrink-0 shadow-[0_0_5px_rgba(6,182,212,0.8)]" />
+                        {viewMode}
                       </span>
                     </div>
                   </div>

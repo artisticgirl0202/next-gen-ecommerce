@@ -41,7 +41,12 @@ def list_products(
         if raw_items and len(raw_items) > 0:
             print("🚀 [Cache Hit] Using data from Redis")
             items = [json.loads(it) for it in raw_items]
-            source = "redis"
+            # brand가 비어있는 캐시라면 DB로 재조회하여 갱신
+            if items and all(not (it or {}).get("brand") for it in items):
+                print("ℹ️ [Cache Incomplete] brand missing -> fallback to DB")
+                items = []
+            else:
+                source = "redis"
     except Exception as e:
         print(f"⚠️ Redis 조회 중 오류: {e}")
         raw_items = []
@@ -50,8 +55,8 @@ def list_products(
     if not items:
         print("🔍 [Cache Miss] Fetching directly from PostgreSQL...")
         try:
-            # [수정됨] specs와 reviews 컬럼도 같이 조회합니다.
-            query = text("SELECT id, name, price, category, image, description, specs, reviews FROM products")
+            # [수정됨] brand/specs/reviews 컬럼도 같이 조회합니다.
+            query = text("SELECT id, name, brand, price, category, image, description, specs, reviews FROM products")
             result = db.execute(query)
             rows = result.fetchall()
 
@@ -59,12 +64,13 @@ def list_products(
                 product_dict = {
                     "id": row[0],
                     "name": row[1],
-                    "price": float(row[2]) if row[2] else 0,
-                    "category": row[3],
-                    "image": row[4],       # DB 컬럼명 image와 일치 (굿!)
-                    "description": row[5],
-                    "specs": row[6],       # [추가됨] JSONB 데이터는 파이썬 딕셔너리로 자동 변환됨
-                    "reviews": row[7]      # [추가됨]
+                    "brand": row[2],
+                    "price": float(row[3]) if row[3] else 0,
+                    "category": row[4],
+                    "image": row[5],       # DB 컬럼명 image와 일치 (굿!)
+                    "description": row[6],
+                    "specs": row[7],       # [추가됨] JSONB 데이터는 파이썬 딕셔너리로 자동 변환됨
+                    "reviews": row[8]      # [추가됨]
                 }
                 items.append(product_dict)
 

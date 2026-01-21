@@ -40,6 +40,8 @@ export default function ProductList({
   const [visibleCount, setVisibleCount] = useState<number>(24);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
+
+
   // 카테고리나 필터 변경 시 스크롤 및 개수 초기화
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -204,7 +206,7 @@ export default function ProductList({
 
                     ${
                       isList
-                        ? 'p-4 md:p-6 md:flex-row md:items-stretch gap-4 md:gap-8'
+                        ? 'p-4 md:p-6 md:flex-row md:items-stretch gap-4 md:gap-8 h-[260px] md:h-[220px]'
                         : 'p-3 sm:p-5 gap-2 sm:gap-3'
                     }
                   `}
@@ -216,7 +218,7 @@ export default function ProductList({
                     relative overflow-hidden shrink-0 border border-white/5 rounded-xl
                     ${
                       isList
-                        ? 'w-full aspect-video md:w-[240px] md:aspect-auto md:h-auto'
+                        ? 'w-full h-[180px] md:w-[240px] md:h-[180px]'
                         : 'w-full aspect-[4/3]'
                     }
                   `}
@@ -268,14 +270,22 @@ export default function ProductList({
                       </div>
 
                       <h3
-                        className={`font-bold text-white uppercase italic leading-tight group-hover:text-cyan-50 transition-colors ${isList ? 'text-lg md:text-2xl mb-2 line-clamp-1' : 'text-base sm:text-xl md:text-2xl mt-1 line-clamp-2'}`}
+                        className={`font-bold text-white uppercase italic leading-tight group-hover:text-cyan-50 transition-colors ${
+                          isList
+                            ? 'text-lg md:text-2xl mb-2 line-clamp-1 pr-1 min-h-[2.5rem]'
+                            : 'text-base sm:text-xl md:text-2xl mt-1 line-clamp-2 mb-1 min-h-[2.75rem] sm:min-h-[3.25rem] md:min-h-[3.75rem] lg:min-h-[4rem]'
+                        }`}
                       >
                         {product.name}
                       </h3>
 
                       {(product.description || isList) && (
                         <p
-                          className={`text-slate-400 leading-relaxed opacity-80 ${isList ? 'text-sm line-clamp-2 md:line-clamp-2 w-full max-w-2xl' : 'text-[10px] sm:text-sm line-clamp-2'}`}
+                          className={`text-slate-400 leading-relaxed opacity-80 ${
+                            isList
+                              ? 'text-sm line-clamp-2 md:line-clamp-2 w-full max-w-2xl'
+                              : 'text-[10px] leading-[1.7] sm:text-sm sm:leading-relaxed line-clamp-2 pb-0.5 sm:pb-0.6 lg:pb-1.4'
+                          }`}
                         >
                           {product.description ||
                             'High-performance tech designed for the future.'}
@@ -302,7 +312,7 @@ export default function ProductList({
                       )}
 
                       <div
-                        className={`${isList ? 'md:text-center' : 'text-center pb-4'}`}
+                        className={`${isList ? 'md:text-center' : 'text-left pb-4'}`}
                       >
                         <span
                           className={`font-black text-white tracking-tight ${isList ? 'text-xl md:text-2xl' : 'text-lg sm:text-2xl'}`}
