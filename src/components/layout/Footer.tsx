@@ -68,7 +68,7 @@ const Footer = () => {
           {/* 1. 브랜드 정보 & 로고 (lg: 4칸 차지) */}
           <div className="lg:col-span-4 flex flex-col gap-6">
             <div className="flex items-center gap-2 group cursor-default w-fit">
-              <div className="w-8 h-8 bg-cyan-400/80 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.4)] group-hover:rotate-12 transition-transform duration-300">
+              <div className="w-5.5 h-5.5 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.4)] group-hover:rotate-12 transition-transform duration-300">
                 <img
                   src="/logo.png"
                   alt="TECH.CO Logo"

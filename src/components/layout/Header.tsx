@@ -52,7 +52,7 @@ interface HeaderProps {
   onBrandsChange: (brands: string[]) => void;
 }
 
-export default function Header({
+export default function CategoryHeader({
   onCategorySelect,
   activeCategory,
   viewMode = 'grid',

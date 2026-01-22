@@ -2,7 +2,7 @@
 // next-gen-ecommerce/src/pages/Home.tsx
 "use client";
 
-import Header from "@/components/layout/Header";
+import CategoryHeader from "@/components/layout/Header";
 import ProductList from "@/components/product/ProductList";
 import { AnimatePresence, motion } from "framer-motion";
 import { Cpu, Target, Zap } from "lucide-react";
@@ -63,93 +63,197 @@ function LandingView({ handleCategoryChange, viewMode }: { handleCategoryChange:
   return (
     <div className="space-y-24 md:space-y-32 pb-20 overflow-hidden relative">
 
-      <section className="relative pt-22 md:pt-24 lg:pt-32 px-4 md:px-6 flex flex-col items-center text-center z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 md:gap-3 px-4 py-1.5 rounded-full border border-cyan-500/40 bg-cyan-950/30 backdrop-blur-md mb-6 md:mb-10 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
-        >
-          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-          <span className="text-[9px] md:text-[11px] font-black tracking-[0.3em] text-cyan-300 uppercase">
-            Neural Engine V2.5 Active
-          </span>
-        </motion.div>
+     <section className="relative w-full min-h-[90vh] pt-20 flex flex-col items-center justify-start text-center z-10 overflow-hidden perspective-[1000px]">
 
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="flex flex-col items-center justify-center font-black tracking-tighter italic text-white mb-6 md:mb-10 leading-[0.85] select-none"
-        >
-          <span className="text-5xl sm:text-7xl md:text-8xl lg:text-[10rem] xl:text-[11rem] drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-            FUTURE
-          </span>
-          <span className="relative inline-block pr-[0.2em] sm:pr-[0.25em] lg:pr-[0.3em] pl-2 py-4 text-5xl sm:text-7xl md:text-8xl lg:text-[10rem] xl:text-[11rem] font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-cyan-200 to-blue-500 leading-[0.85] z-50 drop-shadow-[0_0_30px_rgba(6,182,212,0.4)] overflow-visible">
-            INTERFACE
-          </span>
-        </motion.h1>
+      {/* 0. [NEW] 배경: 사이버 그리드 & 스포트라이트 */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+       {/* 격자 무늬 배경 */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] 
+          [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_10%,transparent_100%)]"
+        />
+        {/* 중앙 글로우 - 그라데이션으로 자연스럽게 퍼지도록 수정 */}
+        <div
+          className="
+            absolute top-0 left-1/2 -translate-x-1/2
+            w-[800px] h-[500px]
+            bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.15)_0%,transparent_70%)]
+            blur-[60px]
+            mix-blend-screen
+            pointer-events-none /* 클릭 방지 추가 권장 */
+          "
+        />
+      </div>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="max-w-[90%] md:max-w-2xl lg:max-w-3xl text-slate-400 text-xs sm:text-sm md:text-lg lg:text-xl leading-relaxed tracking-wide mb-10 md:mb-16 font-light"
-        >
-          AI-powered neural network algorithms analyze your usage patterns to suggest the optimal device.
-          <br className="hidden md:block"/>
-          Experience the new standard of zero-latency, hyper-responsive commerce.
-        </motion.p>
+      {/* 0. [NEW] HUD 장식 요소 (좌우측 기술적인 라인들) */}
+      <div className="absolute top-1/4 left-10 hidden lg:flex flex-col gap-2 opacity-30 select-none pointer-events-none">
+        <div className="w-1 h-12 bg-cyan-500/50" />
+        <div className="w-1 h-4 bg-cyan-500/30" />
+        <span className="text-[10px] font-mono text-cyan-500 rotate-90 origin-left translate-y-8 mt-4">SYS.READY</span>
+      </div>
+      <div className="absolute top-1/4 right-10 hidden lg:flex flex-col items-end gap-2 opacity-30 select-none pointer-events-none">
+        <div className="w-1 h-12 bg-white/20" />
+        <div className="w-1 h-4 bg-white/10" />
+        <span className="text-[10px] font-mono text-slate-500 -rotate-90 origin-right translate-y-8 mt-4">V.2.0.45</span>
+      </div>
+
+
+      {/* 1. 주인공 이미지 (home-bg.png) + [NEW] Floating Animation */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{
+          opacity: 1,
+          scale: 1,
+          y: [0, -15, 0] // 둥둥 떠다니는 효과
+        }}
+        transition={{
+          duration: 1, // 등장 속도
+          y: { duration: 4, repeat: Infinity, ease: "easeInOut" } // 떠다니는 속도
+        }}
+        className="
+          relative z-10
+          flex justify-center items-center
+          mb-0
+        "
+      >
+        <img
+          src="/home-bg.png"
+          alt="Cyber AI hero"
+          className="
+            relative
+            object-contain
+            w-[280px] sm:w-[400px] md:w-[500px] lg:w-[700px]
+            opacity-90 drop-shadow-[0_0_50px_rgba(6,182,212,0.2)]
+            [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_85%,transparent_100%)]
+          "
+        />
+      </motion.div>
+
+      {/* 2. Neural Engine 배지 */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="
+          relative z-20
+          -mt-16 md:-mt-24 lg:-mt-32 
+          mb-6 md:mb-8
+          group
+          cursor-default
+        "
+      >
+        <div className="
+          inline-flex items-center gap-2 px-4 py-1.5 md:px-5 md:py-2
+          rounded-full border border-cyan-500/20 bg-slate-950/40 backdrop-blur-md 
+          shadow-[0_0_20px_rgba(6,182,212,0.1)]
+          hover:border-cyan-500/50 hover:shadow-[0_0_25px_rgba(6,182,212,0.3)]
+          transition-all duration-300
+        ">
+          <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_8px_cyan]" />
+          <span className="text-[10px] md:text-xs font-bold tracking-[0.2em] text-cyan-200 uppercase group-hover:text-cyan-100 transition-colors">
+            Neural Engine V2.5
+          </span>
+        </div>
+      </motion.div>
+
+
+         {/* 4. 메인 타이틀 (FUTURE INTERFACE) */}
+
+      <motion.h1
+
+        initial={{ opacity: 0, y: 30 }}
+
+        animate={{ opacity: 1, y: 0 }}
+
+        transition={{ delay: 0.2 }}
+
+        className="
+
+          relative z-20
+
+          flex flex-col items-center justify-center
+
+          font-black tracking-tighter italic text-white
+
+          leading-[0.85] select-none
+
+        "
+
+      >
+
+        <span className="text-5xl sm:text-7xl md:text-8xl lg:text-[9rem] xl:text-[11rem] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
+
+          FUTURE
+
+        </span>
+
+        <span className="
+
+          text-5xl sm:text-7xl md:text-8xl lg:text-[9rem] xl:text-[11rem]
+
+          text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-white to-blue-500
+
+          drop-shadow-[0_0_30px_rgba(6,182,212,0.6)] pr-10
+
+        ">
+
+          INTERFACE
+
+        </span>
+
+      </motion.h1>
+      {/* 4. 설명 텍스트 & 버튼 */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 }}
+        className="relative z-20 mt-10 md:mt-16 flex flex-col items-center w-full"
+      >
+        <p className="max-w-[80%] md:max-w-2xl text-slate-400 text-sm md:text-lg mb-10 font-light tracking-wide leading-relaxed">
+          <span className="text-cyan-400/80 font-mono text-xs block mb-2 tracking-widest uppercase">
+            // System Optimized
+          </span>
+          AI-powered neural network algorithms suggest the optimal device.
+          <br className="hidden md:block" />
+          Experience the <span className="text-white font-medium">zero-latency</span> commerce standard.
+        </p>
 
         <motion.button
-  whileHover={{ scale: 1.02 }}
-  whileTap={{ scale: 0.98 }}
-  onClick={() => handleCategoryChange("ALL")}
-  className="
-    group relative inline-flex items-center justify-center
-    overflow-hidden rounded-full p-[1px]
-    focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:ring-offset-2 focus:ring-offset-slate-950
-    /* 반응형 너비 설정: 모바일에서는 조금 넓게, PC에서는 내용에 맞게 */
-    w-auto min-w-[200px] md:min-w-[240px]
-  "
->
-  {/* 1. 배경 애니메이션 그라디언트 (보더 역할) */}
-  {/* 색상 변경: Cyan-400 (밝은 하늘) <-> Blue-600 (진한 파랑) */}
-  <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-blue-600 to-cyan-400 animate-[shimmer_2s_linear_infinite] bg-[length:200%_100%]" />
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => handleCategoryChange("ALL")}
+          className="
+            group relative inline-flex items-center justify-center
+            overflow-hidden rounded-full p-[1px]
+            w-auto min-w-[200px] md:min-w-[240px]
+          "
+        >
+          {/* 회전하는 테두리 효과 */}
+          <div className="absolute inset-0 bg-[conic-gradient(from_90deg_at_50%_50%,#00000000_50%,#06b6d4_100%)] animate-[spin_3s_linear_infinite]" />
 
-  {/* 2. 내부 컨텐츠 영역 */}
-  <div className="
-    relative w-full h-full
-    bg-slate-950 group-hover:bg-slate-900/90 transition-colors duration-300
-    rounded-full
-    /* 반응형 패딩 및 폰트 크기 조절 */
-    px-8 py-4 md:px-10 md:py-5
-    flex items-center justify-center gap-3 md:gap-4
-  ">
+          <div className="
+            relative w-full h-full
+             hover:bg-slate-900 transition-colors duration-300
+            rounded-full
+            px-8 py-4 md:px-10 md:py-5
+            flex items-center justify-center gap-3 md:gap-4
+            backdrop-blur-xl
+          ">
+            <Zap
+              size={18}
+              className="text-cyan-500 group-hover:text-cyan-300 group-hover:scale-110 transition-all duration-300 hidden sm:block drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]"
+            />
+            <span className="
+              font-bold uppercase tracking-[0.25em] text-white
+              text-xs md:text-sm
+              group-hover:text-cyan-50 transition-colors
+            ">
+              Enter Archive
+            </span>
+          </div>
+        </motion.button>
+      </motion.div>
 
-    {/* 장식용 아이콘 (선택사항) */}
-    <Zap
-      size={16}
-      className="text-cyan-500 group-hover:text-cyan-300 transition-colors duration-300 hidden sm:block"
-    />
-
-    {/* 텍스트 */}
-    <span className="
-      font-black uppercase tracking-[0.2em] text-white
-      /* 모바일: 12px, 태블릿 이상: 14px */
-      text-xs md:text-sm
-      group-hover:text-cyan-50 transition-colors
-    ">
-      Explore Archive
-    </span>
-
-
-  </div>
-
-  {/* 3. 호버 시 나타나는 은은한 광선 효과 (Glow) */}
-  <div className="absolute inset-0 rounded-full shadow-[0_0_20px_rgba(34,211,238,0.0)] group-hover:shadow-[0_0_25px_rgba(34,211,238,0.4)] transition-shadow duration-300 pointer-events-none" />
-
-</motion.button>
-      </section>
+    </section>
 
       {/* ✅ CORE TECH SECTION : VIEW MODE 적용
         - Grid Mode: 기존 3열 카드 유지
@@ -297,7 +401,7 @@ function LandingView({ handleCategoryChange, viewMode }: { handleCategoryChange:
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30 selection:text-cyan-100">
 
-      <Header
+      <CategoryHeader
         activeCategory={activeCategory}
         onCategorySelect={handleCategoryChange}
         viewMode={viewMode}
@@ -308,7 +412,7 @@ function LandingView({ handleCategoryChange, viewMode }: { handleCategoryChange:
         onBrandsChange={handleBrandsChange}
       />
 
-      <main className="pt-20">
+      <main className="pt-12">
         <AnimatePresence mode="wait">
           {activeCategory === "HOME" ? (
             <motion.div

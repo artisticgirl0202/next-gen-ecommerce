@@ -86,14 +86,14 @@ const Navbar: React.FC<Props> = ({
           setSearchQuery('');
         }}
       >
-        <div className="w-10 h-10 bg-cyan-400/80 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.4)] group-hover:rotate-12 transition-transform cursor-pointer">
+        <div className="w-8 h-8 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.4)] group-hover:rotate-12 transition-transform cursor-pointer">
           <img
             src="/logo.png"
             alt="TECH.CO Logo"
             className="w-full h-full object-contain"
           />
         </div>
-        <h1 className="text-xl font-black tracking-tighter text-white hidden sm:block italic cursor-pointer">
+        <h1 className="text-3xl font-black tracking-tighter text-white hidden sm:block italic cursor-pointer">
           TECH.CO
         </h1>
       </div>
