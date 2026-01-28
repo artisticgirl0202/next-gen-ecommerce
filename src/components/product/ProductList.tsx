@@ -315,9 +315,13 @@ export default function ProductList({
                         className={`${isList ? 'md:text-center' : 'text-left pb-4'}`}
                       >
                         <span
-                          className={`font-black text-white tracking-tight ${isList ? 'text-xl md:text-2xl' : 'text-lg sm:text-2xl'}`}
+
+                          className={`font-black text-white ${isList ? 'text-xl md:text-2xl' : 'text-lg sm:text-2xl'}`}
                         >
-                          ${(product.price ?? 0).toLocaleString()}
+
+                          <span className="text-sm md:text-lg text-gray-200 mr-0.5 md:mr-1 align-middle">$</span>
+                          {(product.price ?? 0).toLocaleString()}
+
                         </span>
                       </div>
 
@@ -329,18 +333,18 @@ export default function ProductList({
                         className={`
                         relative group/btn overflow-hidden rounded-xl
                         
-                        /* 1. 배경 & 테두리 (Future Tech Style) */
+                        
                         bg-gradient-to-r from-cyan-900/20 to-cyan-800/20
                         border border-cyan-500/20
                         
-                        /* 2. 호버 효과 (Glow & Lighten) */
+                    
                         hover:border-cyan-400/50 hover:from-cyan-500/10 hover:to-cyan-400/20
                         focus:outline-none transition-all duration-300
                         
-                        /* 3. 기본 레이아웃 */
+                      
                         flex items-center justify-center cursor-pointer
                         
-                        /* 4. 조건부 크기 (기존 로직 유지 + 반응형 보완) */
+                        
                         ${
                           isList
                             ? 'px-6 py-2 md:py-3 md:w-full' // 리스트 뷰: 버튼 크기 최적화

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { BrowserRouter } from "react-router-dom";
 
 import GlobalCursor from "./components/GlobalCursor";
+import ArchitectureShowcaseLauncher from "./components/ArchitectureShowcaseLauncher";
 
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
           addedFeedback={addedFeedback}
           setAddedFeedback={setAddedFeedback}
         />
+        <ArchitectureShowcaseLauncher />
       </div>
 
     </BrowserRouter>
