@@ -310,18 +310,19 @@ export default function ProductList({
                           </span>
                         </div>
                       )}
-
                       <div
                         className={`${isList ? 'md:text-center' : 'text-left pb-4'}`}
                       >
                         <span
 
-                          className={`font-black text-white ${isList ? 'text-xl md:text-2xl' : 'text-lg sm:text-2xl'}`}
+
+                          className={`inline-flex items-baseline font-black text-white ${isList ? 'text-xl md:text-2xl' : 'text-lg sm:text-2xl '}`}
                         >
 
-                          <span className="text-sm md:text-lg text-gray-200 mr-0.5 md:mr-1 align-middle">$</span>
-                          {(product.price ?? 0).toLocaleString()}
-
+                          <span className="text-sm md:text-lg text-gray-200 mr-0.5 md:mr-1 ">$</span>
+                          <span className="translate-y-[2px]">
+                            {(product.price ?? 0).toLocaleString()}
+                          </span>
                         </span>
                       </div>
 

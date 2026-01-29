@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>next-gen-ecommerce Portfolio</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/architecture-showcase.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
@@ -462,15 +462,15 @@ mapDtoToProduct → updateProductIndexes → render
         </h1>
         <p class="text-[11px] sm:text-xs text-gray-400 uppercase tracking-[0.18em] sm:tracking-[0.2em]">Full Stack • Event-Driven • Hybrid ML</p>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 relative">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 relative">
         <div class="col-span-1 md:col-span-2 flex flex-col gap-3 sm:gap-4">
           <div class="glass-box p-4 sm:p-5 rounded-xl border-l-4 border-cyan-500 h-full flex flex-col justify-between glow-cyan">
             <div>
               <div class="flex items-center gap-2.5 mb-3">
-                <span class="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300">
+                <span class="inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 shrink-0">
                   <i data-lucide="monitor" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                 </span>
-                <h3 class="text-sm sm:text-base font-bold text-white">Client</h3>
+                <h3 class="text-sm sm:text-base font-bold text-white whitespace-nowrap">Client</h3>
               </div>
               <p class="text-[11px] sm:text-xs text-gray-400 mb-4">React (Vite) + TS</p>
 
@@ -478,9 +478,10 @@ mapDtoToProduct → updateProductIndexes → render
                 <div class="bg-gray-800/50 p-2.5 sm:p-3 rounded border border-gray-700">
                   <div class="text-[10px] sm:text-[11px] text-gray-300 font-bold mb-1.5">User Actions</div>
                   <div class="space-y-1">
-                    <div class="code-pill text-cyan-300">POST /api/orders/</div>
-                    <div class="code-pill text-purple-300">POST /api/ai/feedback</div>
-                    <div class="code-pill text-green-300">POST /api/recommend/hybrid</div>
+                    <div class="code-pill text-cyan-300 truncate" title="POST /api/orders/">POST /api/orders/</div>
+
+                    <div class="code-pill text-purple-300 truncate" title="POST /api/ai/feedback">POST /api/ai/feedback</div>
+                  <div class="code-pill text-green-300 truncate" title="POST /api/recommend/hybrid">POST /api/recommend/hybrid</div>
                   </div>
                 </div>
               </div>

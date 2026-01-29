@@ -22,37 +22,39 @@ export default function ArchitectureShowcaseLauncher() {
     <>
       {/* Floating Action Button */}
       <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Open Architecture Showcase"
-        className="
-          fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[180]
-          group flex items-center gap-2.5
-          rounded-full px-3.5 py-2.5 sm:px-5 sm:py-3
-          bg-slate-950/70 backdrop-blur-md
-          border border-cyan-500/30 hover:border-cyan-400/60
-          shadow-[0_0_25px_rgba(6,182,212,0.18)]
-          hover:shadow-[0_0_35px_rgba(6,182,212,0.28)]
-          transition-all duration-300
-          active:scale-95
-        "
-      >
-        <span className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-cyan-500/10 border border-cyan-500/25">
-          <Layers className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-cyan-300" />
-          <span className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-[0_0_18px_rgba(34,211,238,0.55)]" />
+      type="button"
+      onClick={() => setOpen(true)}
+      aria-label="Open Architecture Showcase"
+      className="
+        fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[180]
+        group flex items-center justify-center
+        gap-0 sm:gap-3
+        rounded-full 
+        p-1.5 sm:px-5 sm:py-3
+        bg-slate-950/70 backdrop-blur-md
+        border border-cyan-500/30 hover:border-cyan-400/60
+        shadow-[0_0_25px_rgba(6,182,212,0.18)]
+        hover:shadow-[0_0_35px_rgba(6,182,212,0.28)]
+        transition-all duration-300
+        active:scale-95
+      "
+    >
+      {/* 아이콘 영역 (항상 보임, 크기 반응형) */}
+      <span className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-slate-950/70 backdrop-blur-md shrink-0">
+        <Layers className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-cyan-300" />
+        <span className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-[0_0_18px_rgba(34,211,238,0.55)]" />
+      </span>
+
+      {/* 텍스트 영역 (모바일: 숨김 / 태블릿&PC: 보임) */}
+      <span className="hidden sm:flex flex-col items-start text-left">
+        <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-[0.22em] text-cyan-400/80 leading-tight">
+          Architecture
         </span>
-        <span className="hidden sm:flex flex-col items-start leading-none">
-          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-[0.22em] text-cyan-400/80">
-            Architecture
-          </span>
-          <span className="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-white">
-            Showcase
-          </span>
+        <span className="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-white leading-tight">
+          Showcase
         </span>
-        <span className="sm:hidden text-[11px] font-black uppercase tracking-[0.14em] text-white">
-          Arch Showcase
-        </span>
-      </button>
+      </span>
+    </button>
 
       {/* Overlay / Drawer */}
       <AnimatePresence>

@@ -389,8 +389,8 @@ export default function ProductDetailModal({
           </div>
 
           {/* RECOMMENDATIONS SECTION */}
-          <div className="border-t border-white/5 pt-8 relative">
-            <div className="flex items-center justify-between mb-8">
+          <div className="border-t border-white/5 pt-8 relative -mx-6 md:mx-0">
+            <div className="flex items-center justify-between mb-8 px-6 md:px-0">
               <h3 className="text-white text-[10px] font-black uppercase tracking-[0.4em] italic opacity-50">
                 Related Modules
               </h3>
@@ -411,7 +411,7 @@ export default function ProductDetailModal({
             </div>
 
             {recsLoading ? (
-              <div className="flex gap-6 py-6 px-1 overflow-hidden">
+              <div className="flex gap-6 py-6 px-1 overflow-hidden px-6 md:px-0">
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
@@ -426,7 +426,7 @@ export default function ProductDetailModal({
             ) : (
               <div
                 ref={recsScrollRef}
-               className="flex gap-6 overflow-x-auto pb-8 px-8 snap-x
+               className="flex gap-6 overflow-x-auto pb-8 px-6 md:px-0 snap-x
               [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]
               [mask-image:linear-gradient(to_right,transparent,black_0.2%,black_99.8%,transparent)]"
               >

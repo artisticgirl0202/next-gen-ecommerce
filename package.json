@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build:arch-css": "tailwindcss -i ./src/styles/architecture-showcase.css -o ./public/architecture-showcase.css --minify",
+    "build": "npm run build:arch-css && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@rollup/plugin-commonjs": "^29.0.0",
+    "@tailwindcss/cli": "^4.1.18",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^24.10.4",
     "@types/react": "^19.2.7",

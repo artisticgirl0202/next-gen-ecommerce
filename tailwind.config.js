@@ -1,21 +1,10 @@
-/* @type {import('tailwindcss').Config} */
-// @import "tailwindcss";
-// @config "../tailwind.config.js"; /* 설정 파일이 있는 경우 */
-// export default {
-//   content: [
-//     "./index.html",
-//     "./src/**/*.{js,ts,jsx,tsx}",
-//   ],
-//   theme: {
-//     extend: {},
-//   },
-//   plugins: [],
-// }
+
 /** @type {import('tailwindcss').Config} */
 export default {
   // 1. 파일 경로 설정 유지 및 최적화
   content: [
     "./index.html",
+    "./public/architecture-showcase.html",
     "./src/**/*.{js,ts,jsx,tsx}",
     "./app/**/*.{js,ts,jsx,tsx}", // Next.js App Router 사용 시 대비
     "./components/**/*.{js,ts,jsx,tsx}",

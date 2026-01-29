@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* Notes:
+   - This file exists to build a production-safe Tailwind stylesheet for
+     `public/architecture-showcase.html` (which is loaded inside an iframe).
+   - The page keeps its own custom <style> block; this file provides Tailwind utilities.
+*/
+
