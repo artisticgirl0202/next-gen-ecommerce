@@ -40,9 +40,9 @@ export default function ArchitectureShowcaseLauncher() {
       "
     >
       {/* 아이콘 영역 (항상 보임, 크기 반응형) */}
-      <span className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-slate-950/70 backdrop-blur-md shrink-0">
+      <span className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full shrink-0">
         <Layers className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-cyan-300" />
-        <span className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-[0_0_18px_rgba(34,211,238,0.55)]" />
+        <span className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-[0_0_18px_rgba(34,211,238,0.55)] backdrop-blur-md" />
       </span>
 
       {/* 텍스트 영역 (모바일: 숨김 / 태블릿&PC: 보임) */}
