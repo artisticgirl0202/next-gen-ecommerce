@@ -72,9 +72,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     env_file:
+      # DATABASE_URL 은 backend/.env 에서만 읽습니다.
+      # environment 블록에 DATABASE_URL 을 넣으면 루트 .env 값이 env_file 을 덮어쓰므로 제거했습니다.
       - ./backend/.env
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
     volumes:
       - ./backend:/app/backend
       - redis-data:/data

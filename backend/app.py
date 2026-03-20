@@ -56,6 +56,15 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def on_startup():
+    # 0) 연결 대상 DB 호스트 확인 로그 (로컬 vs 클라우드 즉시 확인)
+    _db_url = os.getenv("DATABASE_URL", "")
+    try:
+        from urllib.parse import urlparse
+        _parsed = urlparse(_db_url)
+        logger.info(f"🗄️  Database host → {_parsed.hostname}:{_parsed.port or 5432}  db={_parsed.path.lstrip('/')}")
+    except Exception:
+        logger.info(f"🗄️  DATABASE_URL={_db_url[:60]}...")
+
     # 1) DB 테이블 생성 (없으면 생성)
     # 실제 데이터 초기화는 python backend/seed.py 로 수행합니다.
     try:

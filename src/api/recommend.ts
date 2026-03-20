@@ -5,6 +5,7 @@ import type { Product } from '@/types';
 /** Recommendation 타입 */
 export type Recommendation = Product & {
   why?: string;
+  why_en?: string;
   confidence?: number;
 };
 
@@ -100,6 +101,10 @@ export async function fetchHybridRecommendations(
       price: Number(item.price ?? 0),
       image: item.image ?? '',
       why: item.why ?? item.reason ?? 'AI Based Recommendation',
+      why_en:
+        typeof item.why_en === 'string'
+          ? item.why_en
+          : undefined,
       confidence: typeof item.confidence === 'number' ? item.confidence : 0.4,
     }));
 

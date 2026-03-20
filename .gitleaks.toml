@@ -1,0 +1,31 @@
+# Gitleaks configuration
+# https://github.com/gitleaks/gitleaks
+
+title = "next-gen-ecommerce gitleaks config"
+
+[extend]
+# Extend default rules
+useDefault = true
+
+[allowlist]
+description = "Ignore non-committed files and known false-positive paths"
+paths = [
+  # Python virtual environment — library code, never committed
+  ".venv/",
+  "venv/",
+  # Local .env files — gitignored, should never be committed
+  # (Gitleaks --no-git scans disk files regardless of .gitignore)
+  "\\.env$",
+  "backend/\\.env$",
+  # Dependency lock files and compiled assets
+  "package-lock\\.json",
+  "yarn\\.lock",
+  "pnpm-lock\\.yaml",
+  # Generated / build output
+  "dist/",
+  "build/",
+  # Docker persistent volumes
+  "pgdata/",
+  # Seed data (not code)
+  "backend/data/",
+]

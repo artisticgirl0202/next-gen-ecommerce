@@ -14,7 +14,8 @@ class ProductOut(BaseModel):
     name: Optional[str] = None
     price: Optional[float] = None
     image: Optional[str] = None
-    why: Optional[str] = None
+    why: Optional[str] = None  # Korean explanation (XAI)
+    why_en: Optional[str] = None  # English explanation (XAI)
     confidence: Optional[float] = None
 
 class RecommendResponse(BaseModel):

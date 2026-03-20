@@ -12,6 +12,7 @@ export type Product = {
   connectivity?: string;
   specs?: Record<string, string>;
   why?: string;
+  why_en?: string;
   reviews?: Array<{
     id: number;
     rating: number;

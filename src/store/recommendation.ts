@@ -7,5 +7,6 @@ export interface Recommendation {
 
   /** AI metadata */
   why?: string;
+  why_en?: string;
   confidence?: number;
 }

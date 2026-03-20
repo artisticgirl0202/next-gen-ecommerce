@@ -14,6 +14,7 @@ export interface Product {
 
 // 추천 상품 타입 (Product 상속 + AI 필드 추가)
 export interface Recommendation extends Product {
-  why?: string; // AI 추천 이유 (ex: "최근 본 상품과 유사")
+  why?: string; // AI 추천 이유 (KO)
+  why_en?: string; // AI 추천 이유 (EN)
   confidence?: number; // 신뢰도 점수 (ex: 0.85)
 }

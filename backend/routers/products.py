@@ -1,118 +1,145 @@
+import os
+import json
+import logging
+from typing import Any
+
 from fastapi import APIRouter, Query, Depends, HTTPException
-from typing import Any, List
-import redis, os, json
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-# DB 연결 도구 가져오기
 from backend.db import get_db
+
+# ── logging ───────────────────────────────────────────────────────────────
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Redis 연결 설정
-REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-
+# ── Redis 연결 (REDIS_URL 환경변수 우선, 없으면 host/port 조합) ──────────────
+_redis_client = None
 try:
-    r = redis.Redis(
-        host=REDIS_HOST,
-        port=REDIS_PORT,
-        decode_responses=True,
-        socket_timeout=5
-    )
-except Exception as e:
-    print(f"⚠️ Redis 연결 실패 (로그 확인용): {e}")
-    r = None
+    import redis as _redis_mod
+    _redis_url = os.getenv("REDIS_URL")
+    if _redis_url:
+        # URL 기반 연결 — connection pool 자동 관리
+        _redis_client = _redis_mod.from_url(
+            _redis_url,
+            decode_responses=True,
+            socket_timeout=5,
+            socket_connect_timeout=3,
+        )
+    else:
+        _redis_host = os.getenv("REDIS_HOST", "redis")
+        _redis_port = int(os.getenv("REDIS_PORT", 6379))
+        _redis_client = _redis_mod.Redis(
+            host=_redis_host,
+            port=_redis_port,
+            decode_responses=True,
+            socket_timeout=5,
+            socket_connect_timeout=3,
+        )
+    # 연결 테스트
+    _redis_client.ping()
+    logger.info("✅ Redis connected")
+except Exception as _e:
+    logger.warning(f"⚠️ Redis 연결 실패: {_e} — DB 직접 조회로 동작합니다.")
+    _redis_client = None
 
-@router.get("/", summary="List products (Redis with DB Fallback)")
+# ── 캐시 설정 ──────────────────────────────────────────────────────────────
+_CACHE_KEY = "products:list"
+_CACHE_TTL = 3600  # 1시간
+
+# ── 필요한 컬럼만 명시 (SELECT * 제거 → 전송량 최소화) ─────────────────────
+_SELECT_COLS = "id, name, brand, price, category, image, description, specs, reviews"
+
+
+@router.get("/", summary="List products (Redis → PostgreSQL fallback)")
 def list_products(
     page: int = Query(1, ge=1),
     page_size: int = Query(600, ge=1, le=1000),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> dict[str, Any]:
 
-    items = []
+    items: list = []
     source = "none"
 
-    # 1. Redis에서 데이터 조회 시도
-    try:
-        # 캐시 키 이름 (구분을 위해 products:list로 변경 권장하거나 기존 유지)
-        raw_items = r.lrange("items:list", 0, -1) if r else []
-        if raw_items and len(raw_items) > 0:
-            print("🚀 [Cache Hit] Using data from Redis")
-            items = [json.loads(it) for it in raw_items]
-            # brand가 비어있는 캐시라면 DB로 재조회하여 갱신
-            if items and all(not (it or {}).get("brand") for it in items):
-                print("ℹ️ [Cache Incomplete] brand missing -> fallback to DB")
-                items = []
-            else:
-                source = "redis"
-    except Exception as e:
-        print(f"⚠️ Redis 조회 중 오류: {e}")
-        raw_items = []
-
-    # 2. Redis가 비어있거나 오류가 나면 DB에서 조회 (Fallback)
-    if not items:
-        print("🔍 [Cache Miss] Fetching directly from PostgreSQL...")
+    # ── 1. Redis 캐시 조회 ─────────────────────────────────────────────────
+    if _redis_client:
         try:
-            # [수정됨] brand/specs/reviews 컬럼도 같이 조회합니다.
-            query = text("SELECT id, name, brand, price, category, image, description, specs, reviews FROM products")
-            result = db.execute(query)
+            raw_items = _redis_client.lrange(_CACHE_KEY, 0, -1)
+            if raw_items:
+                parsed = [json.loads(it) for it in raw_items]
+                # brand 누락 캐시는 무효 처리
+                if parsed and any((it or {}).get("brand") for it in parsed):
+                    items = parsed
+                    source = "redis"
+                    logger.info(f"🚀 [Cache Hit] Redis {len(items)}개")
+                else:
+                    logger.info("ℹ️ [Cache Incomplete] brand 없음 → DB 재조회")
+        except Exception as cache_err:
+            logger.warning(f"⚠️ Redis 조회 오류: {cache_err}")
+
+    # ── 2. DB 조회 (Cache Miss) ────────────────────────────────────────────
+    if not items:
+        logger.info("🔍 [Cache Miss] PostgreSQL 직접 조회 중...")
+        try:
+            result = db.execute(
+                text(f"SELECT {_SELECT_COLS} FROM products ORDER BY id")
+            )
             rows = result.fetchall()
 
-            for row in rows:
-                product_dict = {
-                    "id": row[0],
-                    "name": row[1],
-                    "brand": row[2],
-                    "price": float(row[3]) if row[3] else 0,
-                    "category": row[4],
-                    "image": row[5],       # DB 컬럼명 image와 일치 (굿!)
+            items = [
+                {
+                    "id":          row[0],
+                    "name":        row[1],
+                    "brand":       row[2],
+                    "price":       float(row[3]) if row[3] is not None else 0.0,
+                    "category":    row[4],
+                    "image":       row[5],
                     "description": row[6],
-                    "specs": row[7],       # [추가됨] JSONB 데이터는 파이썬 딕셔너리로 자동 변환됨
-                    "reviews": row[8]      # [추가됨]
+                    "specs":       row[7],
+                    "reviews":     row[8],
                 }
-                items.append(product_dict)
-
-            print(f"✅ DB에서 {len(items)}개의 데이터를 찾았습니다.")
-
-            # 3. 가져온 데이터를 Redis에 캐싱 (성공했을 때만)
-            if items and r:
-                try:
-                    # 기존 캐시가 있다면 포맷이 다를 수 있으니 삭제 후 재생성
-                    r.delete("items:list")
-                    json_strings = [json.dumps(item) for item in items]
-                    r.rpush("items:list", *json_strings)
-                    r.expire("items:list", 3600) # 1시간 유지
-                    print("💾 DB 데이터를 Redis에 캐싱 완료")
-                except Exception as cache_e:
-                    print(f"⚠️ Redis 저장 실패: {cache_e}")
-
+                for row in rows
+            ]
             source = "database"
+            logger.info(f"✅ DB에서 {len(items)}개 조회 완료")
 
-        except Exception as e:
-            error_msg = f"Database Error: {str(e)}"
-            print(f"🚨 {error_msg}")
-            # items = []
-            raise HTTPException(status_code=500, detail=f"Database Connection Error: {str(e)}")
+            # ── 3. Redis에 캐싱 (성공 시) ───────────────────────────────────
+            if items and _redis_client:
+                try:
+                    pipe = _redis_client.pipeline()
+                    pipe.delete(_CACHE_KEY)
+                    pipe.rpush(_CACHE_KEY, *[json.dumps(it) for it in items])
+                    pipe.expire(_CACHE_KEY, _CACHE_TTL)
+                    pipe.execute()
+                    logger.info(f"💾 Redis 캐싱 완료 ({_CACHE_TTL}s)")
+                except Exception as set_err:
+                    logger.warning(f"⚠️ Redis 저장 실패: {set_err}")
 
-    # 4. 페이징 처리
+        except Exception as db_err:
+            logger.error(f"🚨 DB 오류: {db_err}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Database error: {db_err}",
+            )
+
+    if not items:
+        logger.warning("⚠️ 상품 없음. Redis·DB 연결을 확인하세요.")
+
+    # ── 4. 페이징 ─────────────────────────────────────────────────────────
     total = len(items)
     start = (page - 1) * page_size
-    end = start + page_size
-    page_items = items[start:end]
+    page_items = items[start: start + page_size]
 
-    # 디버깅 로그 추가
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"📦 Products API: source={source}, total={total}, page={page}, page_size={page_size}, returning={len(page_items)} items")
-    if total == 0:
-        logger.warning("⚠️ No products found! Check Redis and database connection.")
+    logger.info(
+        f"📦 Products API | source={source} total={total} "
+        f"page={page} page_size={page_size} returning={len(page_items)}"
+    )
 
     return {
-        "items": page_items,
-        "total": total,
-        "page": page,
-        "pageSize": page_size,
-        "debug_source": source  # 데이터가 어디서 왔는지 확인용
+        "items":       page_items,
+        "total":       total,
+        "page":        page,
+        "pageSize":    page_size,
+        "debug_source": source,
     }

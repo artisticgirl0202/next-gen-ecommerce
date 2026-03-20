@@ -78,7 +78,8 @@ def get_fallback_from_db(db: Session, limit: int = 6):
                 "name": row.name,
                 "price": row.price,
                 "image": row.image,
-                "why": "인기 상품 (추천)", # 콜드 스타트용 메시지
+                "why": "인기 상품 (추천)",
+                "why_en": "Popular picks (recommendation)",
                 "confidence": 0.0
             })
         return recs
@@ -196,7 +197,12 @@ async def recommend_hybrid(
             if not p: continue
 
             conf = float(min(1.0, float(final_scores[pos])))
-            why = "최근 관심 반영" if (pos < len(boosts) and boosts[pos] > 0) else "유사 상품"
+            if pos < len(boosts) and boosts[pos] > 0:
+                why = "최근 관심 반영"
+                why_en = "Reflecting recent interest"
+            else:
+                why = "유사 상품"
+                why_en = "Similar products"
 
             recs.append({
                 "id": p.get("id"),
@@ -204,6 +210,7 @@ async def recommend_hybrid(
                 "price": p.get("price"),
                 "image": p.get("image"),
                 "why": why,
+                "why_en": why_en,
                 "confidence": round(conf, 3)
             })
 
