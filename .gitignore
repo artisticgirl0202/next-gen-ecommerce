@@ -127,3 +127,26 @@ logs/
 # Scratch / temp files
 .env
 leak_report.json
+
+# -------------------------
+# Runtime-generated data
+# -------------------------
+# Auto-generated embedding cache (rebuild via: python -c "from backend.embedding import build_embeddings; build_embeddings()")
+backend/data/product_embeddings.npy
+
+# Runtime user interaction log (populated by the consumer, not source code)
+backend/data/interactions.json
+
+# Backup / temp files
+*.bak
+*.tmp
+*.swp
+
+# Duplicate/lowercase Dockerfile artifacts (use backend/Dockerfile)
+backend/dockerfile
+
+# TypeScript build cache
+tsconfig.tsbuildinfo
+
+# Dependency shim patches (auto-generated, not source)
+.backup_shims/
