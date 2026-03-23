@@ -12,53 +12,8 @@ interface HomeProps {
   searchQuery?: string;
 }
 
-export default function Home({ searchQuery = "" }: HomeProps) {
-  // ✅ [Core Logic] URL 파라미터로 상태 관리
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  // 1. URL에서 상태 읽기
-  const activeCategory = searchParams.get("category") || "HOME";
-  const viewMode = (searchParams.get("view") as "grid" | "list") || "grid";
-  const sortBy = searchParams.get("sort") || "newest";
-  const brandsParam = searchParams.get("brands");
-  const activeBrands = brandsParam ? brandsParam.split(",") : [];
-
-  // 2. 상태 변경 핸들러
-  const handleCategoryChange = (cat: string) => {
-    const newParams = new URLSearchParams(searchParams);
-    if (cat === "HOME") {
-        newParams.set("category", "HOME");
-    } else {
-        newParams.set("category", cat);
-    }
-    setSearchParams(newParams);
-  };
-
-  const handleViewModeChange = (mode: "grid" | "list") => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("view", mode);
-    setSearchParams(newParams);
-  };
-
-  const handleSortChange = (sort: "newest" | "price_low" | "price_high") => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("sort", sort);
-    setSearchParams(newParams);
-  };
-
-  const handleBrandsChange = (brands: string[]) => {
-    const newParams = new URLSearchParams(searchParams);
-    if (brands.length > 0) {
-      newParams.set("brands", brands.join(","));
-    } else {
-      newParams.delete("brands");
-    }
-    setSearchParams(newParams);
-  };
-
-  // LandingView is extracted to a module-level component (declared at the end) to avoid creating components inside render
-
-
+// LandingView is defined at module scope (outside Home) to avoid
+// creating a new component reference on every render.
 function LandingView({ handleCategoryChange, viewMode }: { handleCategoryChange: (cat: string) => void; viewMode: "grid" | "list" }) {
   return (
     <div className="space-y-24 md:space-y-32 pb-20 overflow-hidden relative">
@@ -397,6 +352,50 @@ function LandingView({ handleCategoryChange, viewMode }: { handleCategoryChange:
     </div>
   );
 }
+
+export default function Home({ searchQuery = "" }: HomeProps) {
+  // ✅ [Core Logic] URL 파라미터로 상태 관리
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // 1. URL에서 상태 읽기
+  const activeCategory = searchParams.get("category") || "HOME";
+  const viewMode = (searchParams.get("view") as "grid" | "list") || "grid";
+  const sortBy = searchParams.get("sort") || "newest";
+  const brandsParam = searchParams.get("brands");
+  const activeBrands = brandsParam ? brandsParam.split(",") : [];
+
+  // 2. 상태 변경 핸들러
+  const handleCategoryChange = (cat: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (cat === "HOME") {
+        newParams.set("category", "HOME");
+    } else {
+        newParams.set("category", cat);
+    }
+    setSearchParams(newParams);
+  };
+
+  const handleViewModeChange = (mode: "grid" | "list") => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("view", mode);
+    setSearchParams(newParams);
+  };
+
+  const handleSortChange = (sort: "newest" | "price_low" | "price_high") => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("sort", sort);
+    setSearchParams(newParams);
+  };
+
+  const handleBrandsChange = (brands: string[]) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (brands.length > 0) {
+      newParams.set("brands", brands.join(","));
+    } else {
+      newParams.delete("brands");
+    }
+    setSearchParams(newParams);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30 selection:text-cyan-100">

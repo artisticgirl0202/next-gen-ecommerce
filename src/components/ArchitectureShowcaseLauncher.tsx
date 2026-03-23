@@ -22,10 +22,10 @@ export default function ArchitectureShowcaseLauncher() {
     <>
       {/* Floating Action Button */}
       <button
-      type="button"
-      onClick={() => setOpen(true)}
-      aria-label="Open Architecture Showcase"
-      className="
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Open Architecture Showcase"
+        className="
         fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[180]
         group flex items-center justify-center
         gap-0 sm:gap-3
@@ -38,23 +38,23 @@ export default function ArchitectureShowcaseLauncher() {
         transition-all duration-300
         active:scale-95
       "
-    >
-      {/* 아이콘 영역 (항상 보임, 크기 반응형) */}
-      <span className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full shrink-0">
-        <Layers className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-cyan-300" />
-        <span className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-[0_0_18px_rgba(34,211,238,0.55)] backdrop-blur-md" />
-      </span>
+      >
+        {/* 아이콘 영역 (항상 보임, 크기 반응형) */}
+        <span className="relative flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full shrink-0">
+          <Layers className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-cyan-300" />
+          <span className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-[0_0_18px_rgba(34,211,238,0.55)] backdrop-blur-md" />
+        </span>
 
-      {/* 텍스트 영역 (모바일: 숨김 / 태블릿&PC: 보임) */}
-      <span className="hidden sm:flex flex-col items-start text-left">
-        <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-[0.22em] text-cyan-400/80 leading-tight">
-          Architecture
+        {/* 텍스트 영역 (모바일: 숨김 / 태블릿&PC: 보임) */}
+        <span className="hidden sm:flex flex-col items-start text-left">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-[0.22em] text-cyan-400/80 leading-tight">
+            Architecture
+          </span>
+          <span className="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-white leading-tight">
+            Showcase
+          </span>
         </span>
-        <span className="text-xs sm:text-sm font-black uppercase tracking-[0.16em] text-white leading-tight">
-          Showcase
-        </span>
-      </span>
-    </button>
+      </button>
 
       {/* Overlay / Drawer */}
       <AnimatePresence>
@@ -143,11 +143,20 @@ export default function ArchitectureShowcaseLauncher() {
               </div>
 
               <div className="flex-1 min-h-0 w-full">
+                {/*
+                  sandbox 권한 최소화:
+                  - allow-scripts   : 아이콘 라이브러리(Lucide CDN), 애니메이션 JS 실행에 필요
+                  - allow-same-origin 제거 유지: "allow-scripts + allow-same-origin" 조합은
+                    스크립트가 부모 DOM에 접근해 샌드박스 속성을 직접 삭제할 수 있는
+                    탈출(escape) 취약점이 되므로 절대 함께 사용하지 않음.
+                  - allow-forms, allow-popups 제거: 쇼케이스 페이지에 폼/팝업이 없으므로 불필요
+                */}
                 <iframe
                   title="Architecture Showcase"
                   src={showcaseUrl}
                   className="block h-full w-full bg-black"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                  sandbox="allow-scripts"
+                  referrerPolicy="no-referrer"
                 />
               </div>
             </motion.div>
@@ -157,4 +166,3 @@ export default function ArchitectureShowcaseLauncher() {
     </>
   );
 }
-

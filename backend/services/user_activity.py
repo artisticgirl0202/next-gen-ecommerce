@@ -1,46 +1,88 @@
 # backend/services/user_activity.py
-import redis
+import os
 import json
+import logging
+from typing import Union, Optional
 
-# Redis 설정 (호스트명은 docker-compose 네트워크 상황에 맞게 설정. 로컬 테스트시 localhost, 도커 내부 통신시 redis 등)
-# 현재 에러 로그를 보면 연결은 되고 있으므로 기존 설정 유지
-r = redis.Redis(host="redis", port=6379, decode_responses=True)
-# 주의: 만약 로컬에서 직접 python 실행 중이라면 host="localhost"로 해야 함.
-# 도커 내부라면 host="redis" (또는 서비스명)가 맞음.
+logger = logging.getLogger(__name__)
 
-# 1. action 인자 추가 및 order_id 타입 str로 변경
-def push_recent_click(user_id: int, product_id: int, order_id: str = None, action: str = None, max_len=30):
-    key = f"user:{user_id}:recent_clicks"
+# ── Redis 클라이언트 (연결 실패 시 None으로 폴백) ──────────────────────────
+# REDIS_URL 환경변수 우선 사용 → 없으면 REDIS_HOST/PORT 조합
+# docker-compose 내부: redis://redis:6379/0
+# 로컬 직접 실행:      redis://localhost:6379/0
+_r = None
+try:
+    import redis as _redis_mod
+    _REDIS_URL = os.getenv("REDIS_URL", f"redis://{os.getenv('REDIS_HOST', 'redis')}:{os.getenv('REDIS_PORT', 6379)}/0")
+    _r = _redis_mod.from_url(_REDIS_URL, decode_responses=True)
+    _r.ping()  # 기동 시점에 연결 가능 여부 확인
+    logger.info("user_activity: Redis connected at %s", _REDIS_URL)
+except Exception as _e:
+    logger.warning("user_activity: Redis unavailable (%s) — writes will be silently skipped", _e)
+    _r = None
 
-    # Redis에 저장할 데이터 구성 (action 추가됨)
-    data = {
-        "product_id": product_id,
-        "order_id": order_id,
-        "action": action  # <--- 여기 추가됨
-    }
 
-    # 딕셔너리를 JSON 문자열로 변환
-    value = json.dumps(data)
+def push_recent_click(
+    user_id: Union[int, str],
+    product_id: Optional[Union[int, str]] = None,
+    order_id: Optional[Union[int, str]] = None,
+    action: Optional[str] = None,
+    max_len: int = 30,
+) -> bool:
+    """
+    사용자의 최근 클릭/액션을 Redis 리스트에 저장합니다.
+    Redis가 없으면 False를 반환하고 예외를 발생시키지 않습니다.
+    """
+    if _r is None:
+        return False
+    try:
+        key = f"user:{user_id}:recent_clicks"
+        value = json.dumps(
+            {"product_id": product_id, "order_id": str(order_id) if order_id else None, "action": action},
+            ensure_ascii=False,
+        )
+        _r.lpush(key, value)
+        _r.ltrim(key, 0, max_len - 1)
+        return True
+    except Exception as e:
+        logger.warning("push_recent_click failed: %s", e)
+        return False
 
-    r.lpush(key, value)
-    r.ltrim(key, 0, max_len-1)
 
-# 2. JSON 데이터를 읽어오는 함수 (기존 유지)
-def get_recent_clicks(user_id: int):
-    key = f"user:{user_id}:recent_clicks"
-    raw_data = r.lrange(key, 0, -1)
+def get_recent_clicks(user_id: Union[int, str], limit: int = 30) -> list:
+    """사용자의 최근 클릭 목록을 반환합니다. Redis 불가 시 빈 리스트 반환."""
+    if _r is None:
+        return []
+    try:
+        key = f"user:{user_id}:recent_clicks"
+        raw_data = _r.lrange(key, 0, limit - 1)
+        result = []
+        for x in raw_data:
+            try:
+                result.append(json.loads(x))
+            except json.JSONDecodeError:
+                continue
+        return result
+    except Exception as e:
+        logger.warning("get_recent_clicks failed: %s", e)
+        return []
 
-    result = []
-    for x in raw_data:
-        try:
-            # 저장된 JSON 문자열을 다시 딕셔너리로 변환
-            result.append(json.loads(x))
-        except json.JSONDecodeError:
-            continue # 혹시 모를 데이터 깨짐 방지
 
-    return result
-
-# 3. 상위 함수에도 action 인자 추가
-def log_user_activity(user_id: int, product_id: int, order_id: str = None, action: str = None):
-    # 인자를 그대로 전달
-    push_recent_click(user_id, product_id, order_id, action)
+def log_user_activity(
+    user_id: Union[int, str],
+    order_id: Optional[Union[int, str]] = None,
+    action: Optional[str] = None,
+    product_id: Optional[Union[int, str]] = None,
+) -> bool:
+    """
+    interact.py의 호출 시그니처:
+        log_user_activity(user_id=..., order_id=..., action=...)
+    와 정확히 일치하도록 파라미터 순서를 맞췄습니다.
+    product_id는 선택 인자로 하위 호환성을 유지합니다.
+    """
+    return push_recent_click(
+        user_id=user_id,
+        product_id=product_id,
+        order_id=order_id,
+        action=action,
+    )

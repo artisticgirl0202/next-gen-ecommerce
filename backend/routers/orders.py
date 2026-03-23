@@ -7,7 +7,6 @@ from backend.schemas.order import OrderCreate, OrderResponse
 from backend.services.order_service import create_order
 from backend.models.order import Order as OrderModel
 from typing import List, Any, Union
-import asyncio
 from backend.services.kafka_events import publish_order_created
 
 router = APIRouter(tags=["orders"])
@@ -70,15 +69,15 @@ def enrich_items_with_images(db: Session, items: List[Any]) -> List[Any]:
 # ---------------------------------------------------------
 
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
-def api_create_order(payload: OrderCreate, db: Session = Depends(get_db)):
+async def api_create_order(payload: OrderCreate, db: Session = Depends(get_db)):
     if not payload.items:
         raise HTTPException(status_code=400, detail="items required")
 
     order = create_order(db, payload)
 
     try:
-        asyncio.create_task(publish_order_created(order))
-    except RuntimeError:
+        await publish_order_created(order)
+    except Exception:
         pass
 
     # 생성 시에도 이미지 보강

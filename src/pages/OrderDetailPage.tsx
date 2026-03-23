@@ -135,7 +135,9 @@ function lookupProductMeta(productId: number) {
   try {
     const idx = getProductById(idNum);
     if (idx) return idx;
-  } catch (e) {}
+  } catch (_e) {
+    // product not found in indexed store — fall through to CATEGORY_PRODUCTS
+  }
 
   return CATEGORY_PRODUCTS.find((p) => Number(p.id) === idNum) || null;
 }
@@ -166,7 +168,7 @@ function enrichItem(it: any): OrderItemView {
 // 4. 추천 사유 번역
 const getTranslatedReason = (text: string) => {
   if (!text) return '';
-  if (/^[\x00-\x7F]*$/.test(text)) return text;
+  if (!/[^\x20-\x7E\s]/.test(text)) return text;
 
   if (text.includes('콘텐츠')) return 'Content pattern match';
   if (text.includes('유사')) return 'Based on similarity';
@@ -262,7 +264,7 @@ export default function OrderDetailPage() {
       try {
         const resp: any = await fetchHybridRecommendations(seedId, 4);
 
-        let list: any[] =
+        const list: any[] =
           resp?.recommendations ??
           resp?.data ??
           (Array.isArray(resp) ? resp : []);

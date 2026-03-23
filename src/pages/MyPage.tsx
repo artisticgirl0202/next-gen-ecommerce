@@ -173,7 +173,7 @@ export default function MyPage({ currentUser }: MyPageProps) {
   // --- Helpers ---
   const getTranslatedReason = (text: string) => {
     if (!text) return '';
-    if (/^[\x00-\x7F]*$/.test(text)) return text;
+    if (!/[^\x20-\x7E\s]/.test(text)) return text;
     if (text.includes('콘텐츠') || text.includes('패턴'))
       return 'Content pattern match';
     if (text.includes('유사') || text.includes('비슷한'))

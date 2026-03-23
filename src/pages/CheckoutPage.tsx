@@ -498,6 +498,8 @@ export default function CheckoutPage() {
                     <input
                       required
                       placeholder="0000 0000 0000 0000"
+                      autoComplete="cc-number"
+                      inputMode="numeric"
                       value={paymentForm.cardNumber}
                       onChange={(e) =>
                         handlePaymentChange('cardNumber', e.target.value)
@@ -527,6 +529,8 @@ export default function CheckoutPage() {
                       <input
                         required
                         placeholder="MM / YY"
+                        autoComplete="cc-exp"
+                        inputMode="numeric"
                         value={paymentForm.expiry}
                         onChange={(e) =>
                           handlePaymentChange('expiry', e.target.value)
@@ -556,6 +560,9 @@ export default function CheckoutPage() {
                         required
                         placeholder="CVC"
                         type="password"
+                        autoComplete="cc-csc"
+                        inputMode="numeric"
+                        maxLength={4}
                         value={paymentForm.cvc}
                         onChange={(e) =>
                           handlePaymentChange('cvc', e.target.value)

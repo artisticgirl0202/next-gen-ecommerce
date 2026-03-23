@@ -76,26 +76,26 @@ export default function ProductDetailModal({
   useEffect(() => {
     if (!product) return;
 
-    // 1. 추천 로딩 시작
-    setRecsLoading(true);
-    setRecommendations(null); // 이전 데이터 초기화
-
-    fetchHybridRecsAPI(product.id)
-      .then((recs) => {
+    const loadRecs = async () => {
+      setRecsLoading(true);
+      setRecommendations(null);
+      try {
+        const recs = await fetchHybridRecsAPI(product.id);
         if (recs && recs.length > 0) {
           setRecommendations(recs);
         } else {
           console.log('Using local fallback recommendations');
           setRecommendations(getFallbackRecommendations());
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Failed to fetch recs:', err);
         setRecommendations(getFallbackRecommendations());
-      })
-      .finally(() => {
+      } finally {
         setRecsLoading(false);
-      });
+      }
+    };
+
+    loadRecs();
 
     // 2. 상세 페이지 진입 로그(Interaction) 전송
     sendAIFeedbackAPI({

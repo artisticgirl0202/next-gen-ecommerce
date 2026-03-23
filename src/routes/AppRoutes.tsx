@@ -54,6 +54,15 @@ export default function AppRoutes({
   const hideNavbarRoutes = ["/login", "/signup", "/auth-success"];
   const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname);
 
+  const handleLogout = useCallback(() => {
+    setIsLoggingOut(true);
+    setTimeout(() => {
+      logout();
+      setIsLoggingOut(false);
+      navigate("/");
+    }, 1500);
+  }, [logout, navigate]);
+
   const handleViewAction = useCallback((v: string) => {
     switch (v) {
       case "home":
@@ -68,7 +77,7 @@ export default function AppRoutes({
         navigate("/signup");
         break;
     }
-  }, [navigate, setActiveCategory]);
+  }, [navigate, setActiveCategory, handleLogout]);
 
   const handleLogoClick = useCallback(() => {
     if (activeCategory !== "HOME") {
@@ -87,15 +96,6 @@ export default function AppRoutes({
     });
     setAddedFeedback(true);
     setTimeout(() => setAddedFeedback(false), 1000);
-  };
-
-  const handleLogout = () => {
-    setIsLoggingOut(true);
-    setTimeout(() => {
-      logout();
-      setIsLoggingOut(false);
-      navigate("/");
-    }, 1500);
   };
 
   return (
