@@ -1,13 +1,12 @@
-
 /** @type {import('tailwindcss').Config} */
 export default {
   // 1. 파일 경로 설정 유지 및 최적화
   content: [
-    "./index.html",
-    "./public/architecture-showcase.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-    "./app/**/*.{js,ts,jsx,tsx}", // Next.js App Router 사용 시 대비
-    "./components/**/*.{js,ts,jsx,tsx}",
+    './index.html',
+    './public/architecture-showcase.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+    './app/**/*.{js,ts,jsx,tsx}', // Next.js App Router 사용 시 대비
+    './components/**/*.{js,ts,jsx,tsx}',
   ],
 
   theme: {
@@ -19,7 +18,7 @@ export default {
         },
         cyan: {
           500: '#06b6d4',
-        }
+        },
       },
 
       // 3. 애니메이션 핵심 로직 (병합 및 업그레이드)
@@ -41,7 +40,7 @@ export default {
           '0%': { 'border-color': 'rgba(6, 182, 212, 0.1)' },
           '50%': { 'border-color': 'rgba(6, 182, 212, 0.5)' },
           '100%': { 'border-color': 'rgba(6, 182, 212, 0.1)' },
-        }
+        },
       },
 
       animation: {
@@ -55,13 +54,19 @@ export default {
 
       // 4. 반응형 디자인을 위한 커스텀 스크린 (필요 시)
       screens: {
-        'xs': '475px',
+        xs: '475px',
         '2xl': '1536px',
         '3xl': '1920px', // 울트라 와이드 대응
       },
     },
   },
 
+  // CSS 레이어링 풀백 패턴을 위한 커스텀 유틸리티 클래스 등록
+  // 사용법: className="noise-overlay"
+  // 작동 원리: background-image에 두 값을 나열하면 앞이 위 레이어가 됩니다.
+  //   - 외부 URL 로드 성공 → 외부 노이즈 텍스처 표시
+  //   - 외부 URL 로드 실패(403/네트워크 오류) → 브라우저가 해당 레이어를 건너뛰고
+  //     로컬 /noise.svg를 표시 (CSS는 오류 시 해당 이미지를 투명 처리)
   plugins: [
     // 스크롤바 숨기기 유틸리티 (ProductList에서 사용됨)
     function ({ addUtilities }) {
@@ -73,7 +78,17 @@ export default {
             display: 'none',
           },
         },
-      })
+        // 솔루션 2: CSS 레이어링 풀백
+        // 외부 URL → 로컬 /noise.svg 순서로 레이어를 쌓습니다.
+        // 외부 이미지가 실패하면 CSS는 해당 레이어를 무시하고 로컬 파일을 사용합니다.
+        '.noise-overlay': {
+          'background-image': [
+            "url('https://grainy-gradients.vercel.app/noise.svg')",
+            "url('/ai-electronic-device.png')",
+          ].join(', '),
+          'background-repeat': 'repeat',
+        },
+      });
     },
   ],
-}
+};

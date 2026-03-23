@@ -40,8 +40,6 @@ export default function ProductList({
   const [visibleCount, setVisibleCount] = useState<number>(24);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-
-
   // 카테고리나 필터 변경 시 스크롤 및 개수 초기화
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -56,7 +54,7 @@ export default function ProductList({
         if (fetchedProducts && fetchedProducts.length > 0) {
           updateProductIndexes(fetchedProducts);
           // ✅ 리렌더링 트리거
-          setProductsKey(prev => prev + 1);
+          setProductsKey((prev) => prev + 1);
           setProductsCount(ALL_PRODUCTS.length);
         }
       } catch (error) {
@@ -70,14 +68,14 @@ export default function ProductList({
   }, [category]);
 
   useEffect(() => {
-      const interval = setInterval(() => {
-        if (ALL_PRODUCTS.length !== productsCount && ALL_PRODUCTS.length > 0) {
-          setProductsCount(ALL_PRODUCTS.length);
-          setProductsKey(prev => prev + 1);
-        }
-      }, 500);
-      return () => clearInterval(interval);
-    }, [productsCount]);
+    const interval = setInterval(() => {
+      if (ALL_PRODUCTS.length !== productsCount && ALL_PRODUCTS.length > 0) {
+        setProductsCount(ALL_PRODUCTS.length);
+        setProductsKey((prev) => prev + 1);
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [productsCount]);
 
   // --- Logic: Filtering & Sorting ---
   const filteredProducts = useMemo(() => {
@@ -85,8 +83,9 @@ export default function ProductList({
     let list = [...ALL_PRODUCTS];
 
     const targetCategory = normalize(category);
-    console.log(`🔍 카테고리 필터링: target="${targetCategory}", 전체 상품 수=${list.length}`);
-
+    console.log(
+      `🔍 카테고리 필터링: target="${targetCategory}", 전체 상품 수=${list.length}`,
+    );
 
     if (targetCategory !== 'all') {
       // ✅ [수정] beforeFilter 변수 추가
@@ -96,7 +95,9 @@ export default function ProductList({
         const matches = productCategory === targetCategory;
         // ✅ 디버깅: 처음 몇 개만 로그 출력
         if (list.indexOf(p) < 3) {
-          console.log(`  - 상품 "${p.name}": category="${p.category}" -> normalized="${productCategory}", matches=${matches}`);
+          console.log(
+            `  - 상품 "${p.name}": category="${p.category}" -> normalized="${productCategory}", matches=${matches}`,
+          );
         }
         return matches;
       });
@@ -314,12 +315,11 @@ export default function ProductList({
                         className={`${isList ? 'md:text-center' : 'text-left pb-4'}`}
                       >
                         <span
-
-
                           className={`inline-flex items-baseline font-black text-white ${isList ? 'text-xl md:text-2xl' : 'text-lg sm:text-2xl '}`}
                         >
-
-                          <span className="text-sm md:text-lg text-gray-200 mr-0.5 md:mr-1 ">$</span>
+                          <span className="text-sm md:text-lg text-gray-200 mr-0.5 md:mr-1 ">
+                            $
+                          </span>
                           <span className="translate-y-[2px]">
                             {(product.price ?? 0).toLocaleString()}
                           </span>
@@ -369,7 +369,7 @@ export default function ProductList({
                       </button>
                     </div>
                   </div>
-                  <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
+                  <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('/noise.svg')] mix-blend-overlay" />
                 </BentoCard>
               </motion.div>
             );
