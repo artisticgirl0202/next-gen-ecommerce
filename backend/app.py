@@ -1,6 +1,15 @@
 # backend/app.py
 import os
 import logging
+from pathlib import Path
+
+# ── MUST be called before ANY backend module is imported ──────────────────
+# db/session.py reads DATABASE_URL at module-import time via os.getenv().
+# If dotenv is not loaded first, it reads an empty string and falls back
+# to SQLite — causing "no such table" errors at runtime.
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env", override=False)  # backend/.env
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,19 +17,26 @@ from fastapi.middleware.cors import CORSMiddleware
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 라우터 임포트
+# ── DB + ORM models MUST load before any router ───────────────────────────
+# Routers import model classes; if they load first, edge cases can leave
+# metadata incomplete. Loading Base/engine then all models guarantees
+# create_all() sees users, orders, products, etc.
+from backend.db import Base, engine
+from backend.db import engine  # noqa: F811
+from sqlalchemy import text
+
+import backend.models  # noqa: F401 — registers Order, Product, User via __init__.py
+from backend.models.user import User  # noqa: F401 — explicit: ensures `users` table
+
+# 라우터 및 기타 임포트 (모델 등록 이후)
 from backend.routers.health import router as health_router
 from backend.routers.recommend import router as recommend_router
 from backend.routers.interact import router as interact_router
 from backend.routers.products import router as products_router
 from backend.routers import events
+from backend.routers.auth import router as auth_router
 from backend.services.kafka_producer import get_producer, stop_producer
 
-# DB 임포트
-from backend.db import Base, engine
-#Seeding Endpoint
-from backend.db import engine
-from sqlalchemy import text
 # 주문(Orders) 라우터 안전하게 임포트
 try:
     from backend.routers.orders import router as orders_router
@@ -35,20 +51,28 @@ ENABLE_KAFKA = os.getenv("ENABLE_KAFKA", "false").lower() == "true"
 app = FastAPI(title="Next-Gen E-Commerce API (Hybrid Recommender)")
 
 # CORS 설정
-raw_origins = os.getenv(
-    "FRONT_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,http://localhost:4174"
-)
+# CRITICAL: allow_credentials=True requires explicit origins (no wildcard "*").
+# The Vercel production URL must be listed here so HttpOnly cookies are accepted.
+_DEFAULT_ORIGINS = ",".join([
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",  # <-- 요기 추가!
+    "http://127.0.0.1:5174",  # <-- (선택) 안전하게 127.0.0.1도 추가해주면 좋습니다!
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+    "http://localhost:4174",
+    "https://next-gen-ecommerce-six.vercel.app",
+])
+raw_origins = os.getenv("FRONT_ORIGINS", _DEFAULT_ORIGINS)
 FRONT_ORIGINS = [o.strip() for o in raw_origins.split(",") if o.strip()]
 
-# CORS 설정 로깅
 logger.info(f"🌐 CORS allowed origins: {FRONT_ORIGINS}")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=FRONT_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+    allow_credentials=True,   # Required for HttpOnly cookie (Refresh Token) exchange
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
     max_age=3600,
@@ -66,20 +90,27 @@ async def on_startup():
         logger.info(f"🗄️  DATABASE_URL={_db_url[:60]}...")
 
     # 1) DB 테이블 생성 (없으면 생성)
-    # 실제 데이터 초기화는 python backend/seed.py 로 수행합니다.
     try:
+        registered = sorted(Base.metadata.tables.keys())
+        logger.info(f"📋 Registered tables in metadata: {registered}")
         Base.metadata.create_all(bind=engine)
         logger.info("✅ DB Schema ensured (Tables created if not exist)")
     except Exception as e:
         logger.error(f"❌ DB Table creation failed: {e}")
 
-    # 2) Kafka 초기화
+    # 2) Kafka 초기화 (연결 실패 시 서버 부팅을 막지 않음)
     if ENABLE_KAFKA:
         try:
             await get_producer()
             logger.info("✅ Kafka producer initialized")
         except Exception as e:
-            logger.error("❌ Kafka init failed, continuing without Kafka", exc_info=e)
+            # aiokafka now surfaces after 10-second timeout instead of looping
+            # forever — log the failure and continue booting normally.
+            logger.warning(
+                "⚠️ Kafka unavailable (%s) — server will run without Kafka. "
+                "Set ENABLE_KAFKA=false in backend/.env to suppress this warning.",
+                e,
+            )
     else:
         logger.info("🚫 Kafka disabled (ENABLE_KAFKA=false)")
 
@@ -114,6 +145,7 @@ def seed_database():
         return {"error": f"🚨 초기화 실패: {str(e)}"}
 
 # 라우터 등록
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(health_router, prefix="/health", tags=["health"])
 app.include_router(products_router, prefix="/api/products", tags=["products"])
 app.include_router(recommend_router, prefix="/api/recommend", tags=["recommend"])

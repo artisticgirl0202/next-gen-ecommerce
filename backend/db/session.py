@@ -1,6 +1,13 @@
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+# ── Ensure .env is loaded even when this module is imported directly ──────
+# (app.py already calls load_dotenv first, so override=False is safe here)
+load_dotenv(Path(__file__).parent.parent / ".env", override=False)  # backend/.env
 
 # ── URL 로드 ──────────────────────────────────────────────────────────────
 DATABASE_URL = os.getenv("DATABASE_URL")

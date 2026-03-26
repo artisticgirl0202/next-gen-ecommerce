@@ -1,7 +1,7 @@
 'use client';
 
 import { sendAIFeedbackAPI } from '@/api/integration';
-import { API_BASE_URL } from '@/lib/api-config';
+import axiosInstance from '@/lib/axiosInstance';
 import { useCart } from '@/store/cartStore';
 import { useUserStore } from '@/store/userStore';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -200,8 +200,10 @@ export default function CheckoutPage() {
     // 🚀 [백엔드 연동 시작]
     try {
       // 1. 백엔드에 보낼 데이터 준비
+      // userId는 서버가 JWT 토큰에서 직접 추출하므로 전송 불필요.
+      // axiosInstance의 요청 인터셉터가 Authorization: Bearer <token> 헤더를
+      // Zustand 메모리에서 꺼내 자동으로 첨부해 줍니다.
       const orderPayload = {
-        userId: (userData as any)?.id || 1,
         items: selectedItems.map((item) => ({
           productId: item.id,
           qty: item.qty,
@@ -209,22 +211,9 @@ export default function CheckoutPage() {
         })),
       };
 
-      // 2. 백엔드로 주문 요청 (POST)
-      const response = await fetch(`${API_BASE_URL}/api/orders/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderPayload),
-      });
+      // 2. 백엔드로 주문 요청 (POST) — axiosInstance가 Bearer 토큰을 자동 첨부
+      const { data } = await axiosInstance.post('/api/orders/', orderPayload);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || '주문 생성 실패');
-      }
-
-      // 3. 백엔드 응답 받기 (order_no 포함)
-      const data = await response.json();
       console.log('✅ 주문 성공! Server Response:', data);
 
       // 4. 프론트엔드 상태 업데이트용

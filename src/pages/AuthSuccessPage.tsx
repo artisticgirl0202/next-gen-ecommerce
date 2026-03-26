@@ -4,10 +4,13 @@ import { motion } from "framer-motion";
 import { CheckCircle2, CircuitBoard, CreditCard, ShieldCheck, ShoppingBag, User } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/store/authStore";
 
 export default function AuthSuccessPage() {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const displayName = user?.full_name ?? user?.email ?? "Neural Operator";
 
   // ✅ 핵심 로직: "Buy Now"를 통해 오지 않았다면 Home으로 리다이렉트
   // (일반 로그인은 바로 홈으로, 구매 중 로그인은 이 페이지로)
@@ -68,7 +71,7 @@ export default function AuthSuccessPage() {
                 </div>
                 <div>
                     <p className="text-[10px] text-slate-500 uppercase">Authorized User</p>
-                    <p className="text-sm text-white font-bold truncate">Alex Sterling</p>
+                    <p className="text-sm text-white font-bold truncate">{displayName}</p>
                 </div>
              </div>
 

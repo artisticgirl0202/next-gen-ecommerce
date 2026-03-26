@@ -46,7 +46,11 @@ class OrderItem(BaseModel):
     price: Optional[float] = None
 
 class OrderCreate(BaseModel):
-    userId: int
+    # userId is intentionally optional here — the router overwrites it with
+    # the value derived from the authenticated JWT token (get_current_user).
+    # Accepting it from the body is kept for backward compatibility only;
+    # the service layer ignores payload.userId entirely.
+    userId: Optional[int] = None
     items: List[OrderItem]
     metadata: Optional[dict] = None
 

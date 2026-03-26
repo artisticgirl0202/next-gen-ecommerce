@@ -45,7 +45,6 @@ RECENT_HISTORY_KEY = "user:{user_id}:recent_history"
 TOPK_KEY = "item:topk:{item_id}"
 MAX_RECENT = int(os.getenv("MAX_RECENT", "20"))
 HISTORY_MAX = int(os.getenv("HISTORY_MAX", "50"))
-r = redis.Redis(host=os.getenv("REDIS_HOST","redis"), port=int(os.getenv("REDIS_PORT",6379)), decode_responses=True)
 
 # ---------------------------
 # Redis wrapper helpers
@@ -204,5 +203,10 @@ def boost_by_recent_clicks(
     return [boost if pid in recent else 0.0 for pid in candidate_product_ids]
 def add_recent_order(user_id: str, order_no: str, max_len=30):
     key = f"user:{user_id}:recent_orders"
-    r.lpush(key, order_no)
-    r.ltrim(key, 0, max_len-1)
+    if _redis_client is None:
+        return
+    try:
+        _redis_client.lpush(key, order_no)
+        _redis_client.ltrim(key, 0, max_len - 1)
+    except Exception:
+        pass

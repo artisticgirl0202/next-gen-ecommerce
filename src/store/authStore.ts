@@ -1,58 +1,73 @@
-// import { create } from 'zustand';
+/**
+ * Auth store — Zustand memory-only state (NO localStorage / sessionStorage).
+ *
+ * Security: storing the access token in localStorage exposes it to XSS attacks.
+ * By keeping it only in React memory, a compromised third-party script cannot
+ * read the token even if it runs on the same page.
+ *
+ * The refresh token lives in an HttpOnly cookie managed entirely by the browser,
+ * so JavaScript cannot touch it at all.
+ */
+import { create } from "zustand";
 
-// interface User {
-//   name: string;
-//   email: string;
-// }
+import type { AuthUser } from "@/api/auth";
 
-// interface AuthState {
-//   user: User | null;
-//   login: (userData: User) => void;
-//   logout: () => void;
-// }
-
-// export const useAuth = create<AuthState>((set) => ({
-//   user: null, // 초기값은 로그아웃 상태
-//   login: (userData) => set({ user: userData }),
-//   logout: () => set({ user: null }),
-// }));
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-interface User {
-  id?: string | number;
-  name: string;
-  email: string;
-  isGuest?: boolean;
-}
+// Re-export so the rest of the app can use this shape
+export type { AuthUser as User };
 
 interface AuthState {
-  user: User | null;
+  /** Authenticated user profile (null = logged out) */
+  user: AuthUser | null;
+
+  /** Short-lived JWT kept in memory only — never persisted */
+  accessToken: string | null;
+
   isLoggedIn: boolean;
-  rememberMe: boolean;
-  login: (user: User, remember: boolean) => void;
+
+  /** Called after successful login / register / token refresh */
+  setAuth: (user: AuthUser, token: string) => void;
+
+  /** Called after a silent refresh that only returns a new access token */
+  setAccessToken: (token: string) => void;
+
+  /** Wipe all auth state (called on logout) */
+  clearAuth: () => void;
+
+  // ── Backward-compat helpers used by legacy code ──────────────────────────
+  /** @deprecated Use setAuth instead */
+  login: (user: { name: string; email: string }, remember: boolean) => void;
   logout: () => void;
+  rememberMe: boolean;
   setRememberMe: (val: boolean) => void;
 }
 
-export const useAuth = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      isLoggedIn: false,
-      rememberMe: false,
-      setRememberMe: (val) => set({ rememberMe: val }),
-      login: (user, remember) => set({
-        user,
-        isLoggedIn: true,
-        rememberMe: remember
-      }),
-      logout: () => set({ user: null, isLoggedIn: false }),
+export const useAuth = create<AuthState>()((set) => ({
+  user: null,
+  accessToken: null,
+  isLoggedIn: false,
+  rememberMe: false,
+
+  setAuth: (user, token) =>
+    set({ user, accessToken: token, isLoggedIn: true }),
+
+  setAccessToken: (token) => set({ accessToken: token }),
+
+  clearAuth: () => set({ user: null, accessToken: null, isLoggedIn: false }),
+
+  // ── Backward-compat ───────────────────────────────────────────────────────
+  setRememberMe: (val) => set({ rememberMe: val }),
+
+  login: (legacyUser, _remember) =>
+    set({
+      user: {
+        id: 0,
+        email: legacyUser.email,
+        full_name: legacyUser.name,
+        is_oauth: false,
+        is_verified: true,
+      },
+      isLoggedIn: true,
     }),
-    {
-      name: 'auth-storage',
-      // rememberMe가 false일 경우 세션 종료 시 삭제하고 싶다면 조절 가능하지만,
-      // 기본적으로 로컬스토리지에 저장하여 유지합니다.
-    }
-  )
-);
+
+  logout: () => set({ user: null, accessToken: null, isLoggedIn: false }),
+}));

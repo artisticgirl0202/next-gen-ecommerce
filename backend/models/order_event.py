@@ -1,3 +1,10 @@
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime, Integer, JSON, String
+
+from backend.db import Base
+
+
 class OrderEvent(Base):
     __tablename__ = "order_events"
 

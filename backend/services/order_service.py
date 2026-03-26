@@ -36,7 +36,17 @@ FALLBACK_DIR.mkdir(parents=True, exist_ok=True)
 # ---------------------------------------------------------------------
 # Service
 # ---------------------------------------------------------------------
-def create_order(db: Session, payload: OrderCreate) -> Order:
+def create_order(db: Session, payload: OrderCreate, user_id: int) -> Order:
+    """
+    Create a new order and persist it to the database.
+
+    Parameters
+    ----------
+    db      : active SQLAlchemy session
+    payload : validated request body (items, metadata …)
+    user_id : the authenticated user's PK — always supplied by the router
+              via Depends(get_current_user), never trusted from the client body.
+    """
     order_no = f"ORD-{uuid.uuid4().hex[:12].upper()}"
 
     items_serialized: list[dict] = []
@@ -56,7 +66,7 @@ def create_order(db: Session, payload: OrderCreate) -> Order:
 
     order = Order(
         order_no=order_no,
-        user_id=int(payload.userId),
+        user_id=user_id,          # ← always from the verified JWT, never from payload
         status=OrderStatus.CREATED.value,
         total_amount=total_amount,
         items=items_serialized,

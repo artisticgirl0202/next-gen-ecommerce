@@ -1,24 +1,24 @@
-
-
 "use client";
 
 import AppRoutes from "@/routes/AppRoutes";
 import { useState } from "react";
 import { BrowserRouter } from "react-router-dom";
 
-import GlobalCursor from "./components/GlobalCursor";
 import ArchitectureShowcaseLauncher from "./components/ArchitectureShowcaseLauncher";
+import GlobalCursor from "./components/GlobalCursor";
+import { useAuthInit } from "./hooks/useAuthInit";
 
-
-export default function App() {
+function AppInner() {
   const [activeCategory, setActiveCategory] = useState("HOME");
   const [searchQuery, setSearchQuery] = useState("");
   const [addedFeedback, setAddedFeedback] = useState(false);
 
+  // Attempt silent session restore from HttpOnly refresh-token cookie on mount
+  useAuthInit();
+
   return (
-    // ✅ 중요: AppRoutes는 반드시 BrowserRouter 내부에 있어야 합니다.
-    <BrowserRouter>
-      <GlobalCursor/>
+    <>
+      <GlobalCursor />
       <div className="min-h-screen bg-slate-950">
         <AppRoutes
           activeCategory={activeCategory}
@@ -30,9 +30,15 @@ export default function App() {
         />
         <ArchitectureShowcaseLauncher />
       </div>
-
-    </BrowserRouter>
+    </>
   );
 }
 
-
+export default function App() {
+  return (
+    // AppRoutes must be inside BrowserRouter
+    <BrowserRouter>
+      <AppInner />
+    </BrowserRouter>
+  );
+}

@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      },
       proxy: {
         '/api': {
           // 4. 불러온 env 변수를 사용하거나, 없으면 기본값(localhost) 사용

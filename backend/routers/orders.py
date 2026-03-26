@@ -6,6 +6,8 @@ from backend.db.deps import get_db
 from backend.schemas.order import OrderCreate, OrderResponse
 from backend.services.order_service import create_order
 from backend.models.order import Order as OrderModel
+from backend.models.user import User
+from backend.routers.auth import get_current_user
 from typing import List, Any, Union
 from backend.services.kafka_events import publish_order_created
 
@@ -69,11 +71,16 @@ def enrich_items_with_images(db: Session, items: List[Any]) -> List[Any]:
 # ---------------------------------------------------------
 
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
-async def api_create_order(payload: OrderCreate, db: Session = Depends(get_db)):
+async def api_create_order(
+    payload: OrderCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),   # ← JWT 인증 필수
+):
     if not payload.items:
         raise HTTPException(status_code=400, detail="items required")
 
-    order = create_order(db, payload)
+    # user_id는 항상 검증된 JWT 토큰에서 추출 — 클라이언트 body의 userId는 무시
+    order = create_order(db, payload, user_id=current_user.id)
 
     try:
         await publish_order_created(order)
@@ -90,7 +97,6 @@ async def api_create_order(payload: OrderCreate, db: Session = Depends(get_db)):
         status=str(order.status.value if hasattr(order.status, "value") else order.status),
         totalAmount=float(order.total_amount),
         items=final_items,
-        # ⬇️ [수정됨] 충돌 방지를 위해 빈 딕셔너리 {} 반환
         metadata={},
         createdAt=order.created_at.isoformat(),
         updatedAt=order.updated_at.isoformat() if order.updated_at else order.created_at.isoformat(),

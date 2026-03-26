@@ -14,30 +14,17 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# ── Redis 연결 (REDIS_URL 환경변수 우선, 없으면 host/port 조합) ──────────────
+# ── Redis 연결 (REDIS_URL 환경변수 사용) ──────────────────────────────────────
 _redis_client = None
 try:
     import redis as _redis_mod
-    _redis_url = os.getenv("REDIS_URL")
-    if _redis_url:
-        # URL 기반 연결 — connection pool 자동 관리
-        _redis_client = _redis_mod.from_url(
-            _redis_url,
-            decode_responses=True,
-            socket_timeout=5,
-            socket_connect_timeout=3,
-        )
-    else:
-        _redis_host = os.getenv("REDIS_HOST", "redis")
-        _redis_port = int(os.getenv("REDIS_PORT", 6379))
-        _redis_client = _redis_mod.Redis(
-            host=_redis_host,
-            port=_redis_port,
-            decode_responses=True,
-            socket_timeout=5,
-            socket_connect_timeout=3,
-        )
-    # 연결 테스트
+    _redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
+    _redis_client = _redis_mod.from_url(
+        _redis_url,
+        decode_responses=True,
+        socket_timeout=5,
+        socket_connect_timeout=3,
+    )
     _redis_client.ping()
     logger.info("✅ Redis connected")
 except Exception as _e:

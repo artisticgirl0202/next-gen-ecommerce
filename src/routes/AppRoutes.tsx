@@ -19,7 +19,10 @@ import SignUpPage from "@/pages/SignUpPage";
 
 import Footer from "@/components/layout/Footer";
 import AuthSuccessPage from "@/pages/AuthSuccessPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import OrderDetailPage from "@/pages/OrderDetailPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import VerifyEmailPage from "@/pages/VerifyEmailPage";
 import { useAuth } from "@/store/authStore";
 import { useCart } from "@/store/cartStore";
 import type { Product } from "@/types";
@@ -51,7 +54,7 @@ export default function AppRoutes({
 
   // ✅ 2. Navbar를 숨길 경로에 '/auth-success' 추가
   // (이 페이지는 독립적인 디자인을 가지므로 네비게이션 바를 가립니다)
-  const hideNavbarRoutes = ["/login", "/signup", "/auth-success"];
+  const hideNavbarRoutes = ["/login", "/signup", "/auth-success", "/verify-email", "/forgot-password", "/reset-password"];
   const shouldHideNavbar = hideNavbarRoutes.includes(location.pathname);
 
   const handleLogout = useCallback(() => {
@@ -160,7 +163,9 @@ export default function AppRoutes({
           />
 
           <Route path="/auth-success" element={<AuthSuccessPage />} />
-          <Route path="/auth-success" element={<AuthSuccessPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/checkout-gateway" element={<CheckoutGatewayPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />

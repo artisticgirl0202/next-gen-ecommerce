@@ -25,6 +25,11 @@ _producer_lock = asyncio.Lock()
 async def get_producer() -> "AIOKafkaProducer":
     """
     Lazily create and start a singleton Kafka producer.
+
+    aiokafka retries internally on connection failure — without a timeout
+    this coroutine blocks forever and prevents the FastAPI startup from
+    completing. asyncio.wait_for() enforces a hard deadline so the caller
+    can handle the failure and move on.
     """
     if not _HAS_AIOKAFKA:
         raise RuntimeError("aiokafka not available")
@@ -32,13 +37,24 @@ async def get_producer() -> "AIOKafkaProducer":
     global _producer
     async with _producer_lock:
         if _producer is None:
-            _producer = AIOKafkaProducer(
+            candidate = AIOKafkaProducer(
                 bootstrap_servers=BOOTSTRAP,
                 value_serializer=lambda v: json.dumps(
                     v, ensure_ascii=False
                 ).encode("utf-8"),
             )
-            await _producer.start()
+            try:
+                # Hard 10-second deadline — prevents infinite retry hang
+                await asyncio.wait_for(candidate.start(), timeout=10.0)
+            except (asyncio.TimeoutError, Exception) as exc:
+                # Clean up the unclosed producer object before re-raising
+                try:
+                    await candidate.stop()
+                except Exception:
+                    pass
+                raise RuntimeError(f"Kafka connection failed: {exc}") from exc
+
+            _producer = candidate
             print(f"[kafka_producer] started -> {BOOTSTRAP}")
     return _producer
 

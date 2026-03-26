@@ -7,13 +7,12 @@ from typing import Union, Optional
 logger = logging.getLogger(__name__)
 
 # ── Redis 클라이언트 (연결 실패 시 None으로 폴백) ──────────────────────────
-# REDIS_URL 환경변수 우선 사용 → 없으면 REDIS_HOST/PORT 조합
 # docker-compose 내부: redis://redis:6379/0
-# 로컬 직접 실행:      redis://localhost:6379/0
+# Upstash(Render): rediss://:password@host:port (SSL 자동 적용)
 _r = None
 try:
     import redis as _redis_mod
-    _REDIS_URL = os.getenv("REDIS_URL", f"redis://{os.getenv('REDIS_HOST', 'redis')}:{os.getenv('REDIS_PORT', 6379)}/0")
+    _REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
     _r = _redis_mod.from_url(_REDIS_URL, decode_responses=True)
     _r.ping()  # 기동 시점에 연결 가능 여부 확인
     logger.info("user_activity: Redis connected at %s", _REDIS_URL)

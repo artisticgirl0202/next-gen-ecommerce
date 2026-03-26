@@ -2,6 +2,7 @@
 
 import { sendAIFeedbackAPI } from '@/api/integration';
 import { fetchHybridRecommendations } from '@/api/recommend';
+import AccountSettingsModal from '@/components/account/AccountSettingsModal';
 import ProductCard from '@/components/product/ProductCard';
 import ProductDetailModal from '@/components/product/ProductDetailModal';
 import type { OrderShape } from '@/store/orderStore';
@@ -51,6 +52,7 @@ export default function MyPage({ currentUser }: MyPageProps) {
   }, []);
 
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
   const sliderRef = useRef<HTMLDivElement | null>(null);
 
   // Background pattern path
@@ -307,6 +309,7 @@ export default function MyPage({ currentUser }: MyPageProps) {
                   <div className="flex flex-wrap gap-3 justify-center md:justify-start pt-2">
                     {/* 1. CONFIGURE_IDENTITY 버튼 */}
                     <button
+                      onClick={() => setShowAccountSettings(true)}
                       className="
                 relative group/btn overflow-hidden rounded-xl px-5 py-2.5
                 bg-gradient-to-r from-cyan-950/40 to-cyan-900/20 
@@ -678,6 +681,10 @@ export default function MyPage({ currentUser }: MyPageProps) {
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
         />
+      )}
+
+      {showAccountSettings && (
+        <AccountSettingsModal onClose={() => setShowAccountSettings(false)} />
       )}
     </div>
   );

@@ -198,7 +198,7 @@ const Navbar: React.FC<Props> = ({
               onClick={() => onView('mypage')}
               className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-600 hover:text-white transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)] cursor-pointer"
             >
-              {user.name.charAt(0).toUpperCase()}
+              {(user.full_name ?? user.email ?? "U").charAt(0).toUpperCase()}
             </button>
             <button
               onClick={() => logout()}

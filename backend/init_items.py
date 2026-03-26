@@ -1,5 +1,7 @@
 import redis, os, json
-r = redis.Redis(host=os.getenv("REDIS_HOST","localhost"), port=int(os.getenv("REDIS_PORT",6379)), decode_responses=True)
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+r = redis.from_url(REDIS_URL, decode_responses=True)
 items = []
 for i in range(1,401):
     items.append({
