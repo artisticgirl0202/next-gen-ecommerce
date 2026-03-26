@@ -34,7 +34,9 @@ import { useNavigate } from 'react-router-dom';
 interface MyPageProps {
   currentUser: {
     id?: string | number;
-    name: string;
+    /** auth store uses full_name; legacy code may pass name */
+    full_name?: string;
+    name?: string;
     email: string;
     avatar?: string;
     role?: string;
@@ -62,12 +64,12 @@ export default function MyPage({ currentUser }: MyPageProps) {
   useEffect(() => {
     if (currentUser?.email) {
       try {
-        login(currentUser.email, currentUser.name);
+        login(currentUser.email, currentUser.full_name ?? currentUser.name ?? '');
       } catch (e) {
         // Fallback for different user store versions
       }
     }
-  }, [currentUser?.email, login, currentUser.name]);
+  }, [currentUser?.email, login, currentUser.full_name, currentUser.name]);
 
   const userData = getCurrentUser();
   const orders = userData?.orders ?? [];
@@ -256,7 +258,7 @@ export default function MyPage({ currentUser }: MyPageProps) {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-4xl md:text-5xl font-black bg-gradient-to-tr from-cyan-400 to-white bg-clip-text text-transparent">
-                          {currentUser.name?.[0] ?? 'U'}
+                          {(currentUser.full_name ?? currentUser.name ?? 'U')[0]}
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/50 via-transparent to-transparent mix-blend-overlay" />
@@ -273,7 +275,7 @@ export default function MyPage({ currentUser }: MyPageProps) {
                 <div className="flex-1 text-center md:text-left space-y-4">
                   <div>
                     <h1 className="text-3xl sm:text-5xl font-black text-white italic tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
-                      {currentUser.name}
+                      {currentUser.full_name ?? currentUser.name}
                     </h1>
                     <div className="flex items-center justify-center md:justify-start gap-2 mt-1">
                       <span className="text-slate-600 text-sm font-mono tracking-widest">
