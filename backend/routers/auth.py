@@ -160,66 +160,75 @@ def register(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> JSONResponse:
-    # ── 1. Block if an active account already uses this email ─────────────
-    active_user: Optional[User] = (
-        db.query(User)
-        .filter(User.email == body.email, User.is_active == True)
-        .first()
-    )
-    if active_user is not None:
+    try:
+        # ── 1. Block if an active account already uses this email ─────────
+        active_user: Optional[User] = (
+            db.query(User)
+            .filter(User.email == body.email, User.is_active == True)
+            .first()
+        )
+        if active_user is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An account with this email already exists.",
+            )
+
+        # ── 2. Look for a soft-deleted account with this email ────────────
+        # On deletion the email becomes "deleted_{id}_{original_email}",
+        # so we check whether any inactive row ends with "_{body.email}".
+        deleted_user: Optional[User] = (
+            db.query(User)
+            .filter(
+                User.email.endswith(f"_{body.email}"),
+                User.is_active == False,
+            )
+            .first()
+        )
+
+        verification_token: str = uuid.uuid4().hex  # shared by both paths
+
+        if deleted_user is not None:
+            # ── 3. Account Recovery ───────────────────────────────────────
+            deleted_user.email                  = body.email
+            deleted_user.full_name              = body.full_name
+            deleted_user.hashed_password        = hash_password(body.password)
+            deleted_user.is_active              = True
+            deleted_user.is_verified            = False  # must re-verify
+            deleted_user.verification_token     = verification_token
+            deleted_user.failed_login_attempts  = 0
+            deleted_user.account_locked_until   = None
+            db.commit()
+            db.refresh(deleted_user)
+            user = deleted_user
+            logger.info("Account recovered (unverified): id=%s email=%s", user.id, user.email)
+
+        else:
+            # ── 4. Brand-new registration ─────────────────────────────────
+            user = User(
+                email=body.email,
+                hashed_password=hash_password(body.password),
+                full_name=body.full_name,
+                is_oauth=False,
+                is_verified=False,
+                is_active=True,
+                verification_token=verification_token,
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            logger.info("New user registered (unverified): id=%s email=%s", user.id, user.email)
+
+    except HTTPException:
+        # Re-raise known HTTP exceptions (409, etc.) as-is
+        raise
+    except Exception as exc:
+        # Catch unexpected DB / hashing errors and return 500 instead of
+        # letting FastAPI produce an unhandled 500 with a bare traceback.
+        db.rollback()
+        logger.exception("Unexpected error during registration for %s: %s", body.email, exc)
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this email already exists.",
-        )
-
-    # ── 2. Look for a soft-deleted account with this email ────────────────
-    # On deletion the email becomes "deleted_{id}_{original_email}",
-    # so we check whether any inactive row ends with "_{body.email}".
-    deleted_user: Optional[User] = (
-        db.query(User)
-        .filter(
-            User.email.endswith(f"_{body.email}"),
-            User.is_active == False,
-        )
-        .first()
-    )
-
-    verification_token: str = uuid.uuid4().hex  # shared by both paths
-
-    if deleted_user is not None:
-        # ── 3. Account Recovery ───────────────────────────────────────────
-        deleted_user.email              = body.email
-        deleted_user.full_name          = body.full_name
-        deleted_user.hashed_password    = hash_password(body.password)
-        deleted_user.is_active          = True
-        deleted_user.is_verified        = False   # must re-verify via email
-        deleted_user.verification_token = verification_token
-        # Reset brute-force counters from the previous life of the account
-        deleted_user.failed_login_attempts = 0
-        deleted_user.account_locked_until  = None
-        db.commit()
-        db.refresh(deleted_user)
-        user = deleted_user
-        logger.info(
-            "Account recovered (unverified): id=%s email=%s", user.id, user.email
-        )
-
-    else:
-        # ── 4. Brand-new registration ─────────────────────────────────────
-        user = User(
-            email=body.email,
-            hashed_password=hash_password(body.password),
-            full_name=body.full_name,
-            is_oauth=False,
-            is_verified=False,
-            is_active=True,
-            verification_token=verification_token,
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        logger.info(
-            "New user registered (unverified): id=%s email=%s", user.id, user.email
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed due to an internal error. Please try again.",
         )
 
     # ── 5. Send verification email in the background ──────────────────────

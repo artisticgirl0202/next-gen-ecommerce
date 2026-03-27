@@ -65,5 +65,5 @@ class OrderResponse(BaseModel):
     createdAt: str
     updatedAt: str
 
-    class Config:
-        orm_mode = True
+    # Pydantic V2: orm_mode was renamed to from_attributes
+    model_config = {"from_attributes": True}

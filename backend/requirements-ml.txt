@@ -1,0 +1,19 @@
+# =============================================================================
+# ML / AI dependencies  (DO NOT install on Render free tier — 512 MB OOM)
+#
+# Install only when running the full recommendation engine locally or on a
+# paid instance with ≥2 GB RAM:
+#
+#   pip install -r requirements.txt -r requirements-ml.txt
+#
+# The recommend router detects these libs at request time via lazy loading
+# (_ensure_ml_ready) and falls back to Postgres RANDOM() when they're absent.
+# =============================================================================
+
+faiss-cpu==1.13.2
+sentence-transformers==5.2.0
+torch==2.9.1
+transformers==4.57.3
+tokenizers==0.22.1
+safetensors==0.7.0
+huggingface-hub==0.36.0
