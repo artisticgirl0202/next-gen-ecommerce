@@ -146,6 +146,7 @@ np.save(EMBED_FILE, emb)
 | Infrastructure | Docker, Docker Compose |
 | Frontend Deployment | Vercel |
 | Backend Deployment | Render |
+| Email Service | Resend HTTP API (`httpx` async client) |
 
 ---
 
@@ -196,9 +197,33 @@ Source: `src/lib/api-config.ts`
 | `FRONT_ORIGINS` | Comma-separated list of allowed CORS origins | `https://your-app.vercel.app,http://localhost:5173` |
 | `ENABLE_KAFKA` | Set to `true` to activate Kafka producer/consumer | `false` |
 | `KAFKA_BOOTSTRAP_SERVERS` | Kafka broker address | `kafka:9092` |
+| `JWT_SECRET` | 64-byte hex secret for JWT signing | `python -c "import secrets; print(secrets.token_hex(64))"` |
+| `RESEND_API_KEY` | API key for the Resend email service | `re_xxxxxxxxxxxx` |
+| `EMAIL_FROM` | Verified sender address registered in Resend | `onboarding@resend.dev` |
+| `FRONTEND_URL` | Base URL prepended to email action links | `https://your-app.vercel.app` |
+| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 client ID | `xxxx.apps.googleusercontent.com` |
+| `ENVIRONMENT` | Runtime mode: `development` or `production` | `production` |
 
 CORS configuration is logged at startup: `CORS allowed origins: [...]`.
 To troubleshoot CORS errors, verify that `FRONT_ORIGINS` includes the exact Vercel deployment URL.
+
+#### Email Service — Resend API
+
+Render's free tier blocks all outbound SMTP traffic (ports 587 / 465 / 25).
+The email service therefore communicates exclusively over **HTTPS (port 443)** using the [Resend](https://resend.com) REST API, invoked asynchronously via `httpx.AsyncClient`.
+
+Both transactional email functions are fully implemented and operational:
+
+| Function | Trigger | Token lifetime |
+|---|---|---|
+| `send_verification_email` | New account registration | 24 hours |
+| `send_password_reset_email` | Forgot-password request | 15 minutes |
+
+> **⚠️ Demo sandbox limitation**
+>
+> In the live demo deployment, the Resend account is on the free sandbox plan, which restricts outbound delivery to the **account owner's verified email address only** — this is an anti-spam policy enforced by the Resend API, not a code limitation.
+>
+> The asynchronous email-dispatch logic (`backend/services/email_service.py`) is fully implemented and operates correctly. Swapping in a production Resend API key with a verified sender domain instantly enables unrestricted delivery to any recipient.
 
 See `backend/.env.example` for a full list of variables with descriptions.
 

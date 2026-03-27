@@ -38,8 +38,12 @@ aiokafka==0.11.0
 aiofiles==23.2.1
 kafka-python==2.3.0
 
-# ── HTTP client (Google OAuth userinfo endpoint) ──────────────────────────────
+# ── HTTP clients ──────────────────────────────────────────────────────────────
+# requests  — used by google-auth / auth_service.py (Google userinfo endpoint)
 requests==2.32.5
+# httpx     — async HTTP client used by email_service.py → Resend API (HTTPS 443)
+#             replaces smtplib (port 587) which is blocked on Render free tier
+httpx>=0.27.0
 
 # ── Numerics (lightweight — needed for recommend fallback math) ───────────────
 numpy==1.26.4

@@ -246,13 +246,13 @@ def register(
     )
 
 
-def _send_verification_email_safe(email: str, token: str) -> None:
-    """Wrapper used by BackgroundTasks — swallows exceptions so a mail
+async def _send_verification_email_safe(email: str, token: str) -> None:
+    """Async wrapper used by BackgroundTasks — swallows exceptions so a mail
     failure never crashes the background runner."""
     try:
-        send_verification_email(email, token)
+        await send_verification_email(email, token)
     except Exception as exc:
-        logger.error("Background email task failed for %s: %s", email, exc)
+        logger.error("Background verification email failed for %s: %s", email, exc)
 
 
 # ---------------------------------------------------------------------------
@@ -688,9 +688,9 @@ def forgot_password(
     return _safe_response
 
 
-def _send_reset_email_safe(email: str, token: str) -> None:
+async def _send_reset_email_safe(email: str, token: str) -> None:
     try:
-        send_password_reset_email(email, token)
+        await send_password_reset_email(email, token)
     except Exception as exc:
         logger.error("Background password-reset email failed for %s: %s", email, exc)
 
